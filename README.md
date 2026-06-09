@@ -3,8 +3,10 @@
 **Real-time security and architectural guardrails for AI coding agents.**
 
 ![status](https://img.shields.io/badge/status-early%20development-orange)
-![platform](https://img.shields.io/badge/cloud-AWS%20%2F%20EKS-232F3E)
-![deploy](https://img.shields.io/badge/deploy-SaaS%20%7C%20VPC%20%7C%20air--gapped-0FB5A6)
+![runs on](https://img.shields.io/badge/runs%20on-Windows%20%7C%20macOS%20%7C%20Linux%20(all%20distros)-0FB5A6)
+![arch](https://img.shields.io/badge/arch-x86--64%20%7C%20ARM64-555)
+![cloud](https://img.shields.io/badge/cloud-AWS%20%2F%20EKS-232F3E)
+![deploy](https://img.shields.io/badge/deploy-SaaS%20%7C%20VPC%20%7C%20air--gapped-2D6CDF)
 ![license](https://img.shields.io/badge/license-see%20LICENSE-blue)
 
 MEMBRANE.AI is an autonomous **"architectural & security immune system"** for the
@@ -81,6 +83,24 @@ Source-control webhooks                              Orchestrator (Go, Saga stat
 | Masked SaaS | Lowest | Secrets masked locally; only cleaned code leaves the perimeter; zero-data-retention LLM APIs. |
 | Private VPC | High | Full stack runs in the customer's AWS account; cloud-LLM access via PrivateLink. |
 | Air-gapped / on-prem | Maximum | No external API calls; 100% local fine-tuned open models. |
+
+## Cross-platform by design
+
+MEMBRANE.AI runs **everywhere developers and pipelines run** — Windows, macOS and **every major Linux distribution** — with no per-platform forks:
+
+- **Client / agent** (CLI, local prompt/MCP gateway, static analyzer, masking) ships as **single, dependency-free Go static binaries** (`CGO_ENABLED=0`) — nothing to install, no libc coupling.
+- **Server / semantic** components ship as **multi-arch, distroless OCI containers** — any container runtime, any Kubernetes, or a plain VM.
+- Runs on Debian/Ubuntu, RHEL/Rocky/Alma/Fedora, SUSE, Amazon Linux, Oracle Linux, **Alpine (musl)**, Arch and more — on **glibc and musl**, kernel-version-agnostic (optional eBPF layer degrades gracefully).
+- Built for **x86-64 and ARM64** (Intel/AMD · Apple Silicon · AWS Graviton · Ampere).
+
+| Component | Windows | macOS | Linux (glibc) | Linux (musl) | x86-64 | ARM64 |
+| --- | :---: | :---: | :---: | :---: | :---: | :---: |
+| CLI / Code Sweeper | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Local gateway & masking | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| IDE extension | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Core / semantic services | containers | containers | ✓ | ✓ | ✓ | ✓ |
+
+**Distribution:** winget · Scoop · MSI (Windows) · Homebrew · universal `.pkg` (macOS) · `.deb` · `.rpm` · `.apk` · tarball · `curl | sh` (Linux) · multi-arch containers (GHCR/Docker Hub/ECR) · Helm chart + Operator (EKS/GKE/AKS/OpenShift/k3s).
 
 ## Roadmap
 
