@@ -3,55 +3,60 @@
 > **On "devam et": read this file, then do "Next up". Update this file before the session ends.**
 > Keep it short and current — this is state, not history.
 
-_Last updated: 2026-06-11 — session: P2 part 4 (commit_sha contract + GitHub commit-status notifier)._
+_Last updated: 2026-06-11 — session: P3 part 1 (pkg/scan + Code Sweeper CLI)._
 
-## Push policy (current)
+## Push policy
 
-Everything up to `3099a9c` is on GitHub. **The user pushes manually** ("ben pushlarım") — keep
-committing locally, do NOT push unless asked. `.github/` is gitignored (D-026): CI source of truth is
-`deploy/ci/github-ci.yml`; the user enables it once via the GitHub web UI.
+The user pushes manually. Local commits ahead of origin: check `git rev-list --count origin/main..HEAD`.
+`.github/` stays gitignored (D-026); CI source of truth = `deploy/ci/github-ci.yml`.
+
+## ⚠️ Watch out: untracked files vanished twice this session
+
+Newly written (uncommitted) files under `pkg/scan/` and `clients/cli/` disappeared from disk mid-session
+(tracked/modified files were untouched; cause unknown — possibly a `git clean` in the user's open
+terminal or AV). **Mitigation: commit early, commit often** — as soon as a new package compiles+tests,
+commit it before continuing. If a build suddenly can't find a package that "was just there", check
+`git status` / re-create from the last commit.
 
 ## Current state
 
-**P0 ✓, P1 ✓, P2 ✓ (feature-complete for this phase).** `task ci` green: 7 Go modules + Python.
+**P0 ✓, P1 ✓, P2 ✓, P3 started.** `task ci` green: **8 Go modules** (now incl. `clients/cli`) + Python.
 
-- **Contract enrichment (additive)**: `commit_sha`/`pr_number` now flow end-to-end —
-  proto `CodeSubmission` → webhook payload → ingestion domain (`WithSource`) → `pkg/envelope`
-  (`omitempty`, golden-safe) → orchestrator domain → verdict. **Correctness invariant**: the Saga
-  STRIPS source coordinates before caching (`StripSource`) and RE-STAMPS them per submission
-  (`StampSource`) — a cached verdict can be reused across repos/commits safely (unit-proven, incl.
-  cross-repo cache-hit re-stamping).
-- **GitHub commit-status notifier** in the reporter (D-025): posts `membrane-ai/governance` status
-  (success/failure; needs_review→pending), 140-char description cap, token `MEMBRANE_REPORTER_GITHUB_TOKEN`,
-  base URL `…_GITHUB_API_URL` (GHE/tests), silently skips reports without coordinates.
-  **E2E-proven**: webhook with `commit_sha` → … → fake GitHub received
-  `POST /repos/demo/repo/statuses/<sha> {"state":"failure","context":"membrane-ai/governance"}`.
-- Flaky relay test fixed (deterministic polling).
-- Dev stack running; binaries fresh in `%TEMP%\membrane_build\`. Board synced (7 Done, 3 In Progress).
+- **`pkg/scan` (D-027)**: THE single source for deterministic detectors (5 secret patterns w/ masking,
+  3 risky patterns w/ language scoping) + `scan.Run` chain helper. Analyzer domain detectors and the
+  orchestrator's `stages.SecretScan` are now thin delegates — the triplicated regex sets are gone.
+- **Code Sweeper CLI** (`clients/cli`, binary `membrane`, 2.4 MB static, `task build:cli` → `bin/`):
+  `membrane scan [path] [--json] [--fail-on=blocking|warning|never]` — walks a tree (skips
+  .git/node_modules/vendor/…, binaries, >1 MiB), language by extension, findings sorted file:line,
+  human + JSON output, stable CI exit codes (0/1/2). Two-pass flag parse (flags valid before/after
+  path). Live-verified: fixture scan found AWS key (blocking, exit 1) + InsecureSkipVerify (warning);
+  `--fail-on=never --json` exits 0 with full JSON.
+- Taskfile gotcha fixed: task `env:` blocks do NOT override the machine-level stray `GOWORK` — set
+  `GOWORK=off` inline in commands (build:cli now does).
 
-## Next up  (P3 surfaces; see docs/ROADMAP.md — ask the user only if priorities are unclear)
+## Next up  (P3; see docs/ROADMAP.md)
 
-1. **CLI "Code Sweeper"** (`clients/cli`, Go, static binary): scan a local repo/diff offline using the
-   analyzer's detector logic (import `services/analyzer/internal/domain`? NO — internal; lift detectors
-   into a shared `pkg/scan` first, then both analyzer and CLI consume it). Output: human table +
-   `--json`; exit code 1 on blocking findings (CI-friendly). This is the growth-funnel hook from the
-   report (§GTM) and needs no infra.
-2. **PR-comment adapter** in the reporter (findings table as a PR comment when `pr_number` present).
-3. **Real tier-2 vLLM adapter** in the semantic service (OpenAI-compatible /v1/completions client
-   against a vLLM endpoint; config-gated like premium).
+1. **PR-comment adapter** in the reporter: when `pr_number` > 0, post the findings table as a PR
+   comment (`POST /repos/{owner}/{repo}/issues/{pr}/comments`), same token/config family as the
+   commit-status notifier, idempotent per (submission, notifier) as usual. httptest coverage like
+   `githubstatus_test.go`.
+2. **vLLM tier-2 adapter** in the semantic service: OpenAI-compatible `/v1/completions` client
+   (httpx, async, timeout) behind config (`MEMBRANE_SEMANTIC_VLLM_URL`, empty = heuristic stub stays);
+   prompt builds from masked diff + gold context; parse findings JSON; mypy-strict.
+3. Then: Code Sweeper "Technical-Debt Report" mode, or Dockerfiles/Helm for deploy (ask user if equal).
 
 ## Blockers / gotchas
 
-- **Docker** engine flaky — start Docker Desktop manually; never block on it.
-- **Stray `GOWORK`** → ALWAYS `task …` or `GOWORK=off`. **buf** = prebuilt exe. **`-race`** = CI-only.
-- Python venv: `services/semantic/.venv` (`task setup:py`). Integration DSNs: see SKILLS.
-- Reporter consumer groups start from the topic's beginning — use a fresh group name for tests.
+- **Docker** engine flaky — start Docker Desktop manually; never block on it. Dev stack may still be
+  running from earlier sessions (`docker compose … ps`).
+- **Stray `GOWORK`** → inline `GOWORK=off` ONLY (task env: blocks don't beat it). **buf** = prebuilt
+  exe. **`-race`** = CI-only. Python venv: `task setup:py`.
+- Integration DSNs: `MEMBRANE_{ORCHESTRATOR,RESOLVER}_TEST_DSN=postgres://membrane:membrane@localhost:5432/membrane`.
 
 ## How to verify
 
-- `task ci` → all green.
-- GitHub notifier story: `services/reporter/internal/adapters/notify/githubstatus_test.go` (status
-  POST shape, outcome mapping, skip-no-coords, validation, 401). Coordinate caching invariant:
-  `services/orchestrator/internal/app/process_test.go::TestHandle_SourceCoordinatesStampedAndNeverCached`.
-- Live recipe: dev stack + analyzer/orchestrator/ingestion + reporter with `GITHUB_TOKEN=fake`,
-  `GITHUB_API_URL=<sink>`; POST webhook with `commit_sha` → sink receives the status POST.
+- `task ci` → all green (8 Go modules + Python).
+- CLI story: `clients/cli/internal/runner/runner_test.go` (find/sort/count, noise-dir+binary skip,
+  single-file target, language scoping); live: `task build:cli` then
+  `bin\membrane.exe scan <dir>` → findings + exit 1 on a planted `AKIA…` key.
+- pkg/scan story: `pkg/scan/scan_test.go` (all pattern kinds, masking, language scoping, Run chain).

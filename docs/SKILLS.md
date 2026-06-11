@@ -43,6 +43,7 @@ re-run its install line and re-open the shell.
 | `task dev-up` | `docker compose -f deploy/compose/docker-compose.dev.yml up -d` (Redpanda, Redis, pgvector). |
 | `task dev-down` | Tear the dev stack down. |
 | `task run:<svc>` | Run a service locally (e.g. `task run:ingestion`, `task run:semantic`). |
+| `task build:cli` | Build the static Code Sweeper binary into `bin/membrane(.exe)`. |
 | `task setup:py` | One-time: create the semantic venv + install dev deps. |
 | `task lint:py` / `task test:py` | ruff + mypy --strict / pytest on the semantic service. |
 | `task ci` | What CI runs: proto + lint + test + build + Python gates. Run this before "pushla". |

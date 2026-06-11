@@ -18,14 +18,14 @@ pipeline in sub-millisecond time.
 | Service (module) | Lang | Responsibility |
 | --- | --- | --- |
 | `clients/gateway` | Go | Proactive prompt/MCP gateway: intercept, enrich with gold-context + policy, screen responses. |
-| `clients/cli` | Go | "Code Sweeper" CLI + local agent (static analysis, masking) — single static binary. |
+| `clients/cli` | Go | "Code Sweeper" CLI (`membrane scan`): offline repo/file scan via `pkg/scan`, human+JSON output, CI exit codes — single static binary (`task build:cli`). |
 | `services/ingestion` | Go | gRPC duplex stream (IDE) + Git webhooks (HTTP) → publish `code.submission.v1` keyed by org UUID. **(P0)** |
 | `services/orchestrator` | Go | Saga state machine: cache → AST → vector → semantic → consensus; 1200 ms IDE deadline + deterministic fallback. |
 | `services/analyzer` | Go | Deterministic static analysis (gRPC `membrane.analyzer.v1`): secret detection + masking, risky-pattern rules; AST detectors land with resolver-provided full files (D-019). |
 | `services/resolver` | Go | Repo metadata + gold-codebase vector queries (pgvector HNSW). |
 | `services/semantic` | Python/FastAPI | `POST /v1/semantic/evaluate` (HTTP+JSON, D-023): tier-2 local model + tier-3 premium consensus behind the cost gate (D-008); receives masked diffs + resolver gold context. |
 | `services/reporter` | Go | Consumes `code.verdict.v1` → idempotent notifications (Slack-compatible webhook + logs today; GitHub commit-status when `commit_sha` lands, D-025). Health `:8105`. |
-| `pkg/*` | Go | Shared foundation: `config`, `logging`, `errs`, `health`, `kafka`. |
+| `pkg/*` | Go | Shared foundation: `config`, `logging`, `errs`, `health`, `envelope`, **`scan`** (the single detector/masking source, D-027). |
 
 ## 3. Event & data flow
 

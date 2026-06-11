@@ -67,7 +67,12 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done.
 
 ## P3 — Surfaces, deployment, hardening
 
-- [ ] **IDE extension** (VS Code / Cursor) + **CLI "Code Sweeper"**
+- [~] **CLI "Code Sweeper"** (`clients/cli`, static binary `membrane`) — `membrane scan [path]` offline
+      scan via `pkg/scan` (detectors unified across analyzer/orchestrator/CLI, D-027); human + `--json`
+      output; CI exit codes (`--fail-on`)
+      - [ ] "Generative-AI Technical-Debt Report" output mode (the GTM lead magnet)
+      - [ ] packaging matrix: winget/brew/deb/rpm/tarball (P3 release work)
+- [ ] **IDE extension** (VS Code / Cursor)
 - [ ] **SCM integration** (GitHub/GitLab) end-to-end
 - [ ] **Shadow-mode → enforcement** merge gates
 - [ ] **Observability & SRE** (OpenTelemetry, SLOs, dashboards)

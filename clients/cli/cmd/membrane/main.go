@@ -41,9 +41,14 @@ func run(args []string) int {
 	if err := fs.Parse(args[1:]); err != nil {
 		return exitUsage
 	}
+	// Two-pass parse so flags work both before AND after the path argument
+	// (stdlib flag stops at the first positional).
 	root := "."
 	if fs.NArg() > 0 {
 		root = fs.Arg(0)
+		if err := fs.Parse(fs.Args()[1:]); err != nil {
+			return exitUsage
+		}
 	}
 	if *failOn != "blocking" && *failOn != "warning" && *failOn != "never" {
 		fmt.Fprintln(os.Stderr, "invalid --fail-on:", *failOn)

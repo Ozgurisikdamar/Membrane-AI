@@ -87,11 +87,9 @@ tasks:
   build:cli:
     desc: Build the static Code Sweeper binary into bin/ (CGO off, current platform)
     dir: clients/cli
-    env:
-      GOWORK: "off"
-      CGO_ENABLED: "0"
     cmds:
-      - go build -trimpath -ldflags "-s -w" -o ../../bin/membrane{{exeExt}} ./cmd/membrane
+      # GOWORK inline — the machine-level GOWORK override outranks task env blocks.
+      - GOWORK=off CGO_ENABLED=0 go build -trimpath -ldflags "-s -w" -o ../../bin/membrane{{exeExt}} ./cmd/membrane
 
   ci:
     desc: Full local CI gate (run before "pushla")
