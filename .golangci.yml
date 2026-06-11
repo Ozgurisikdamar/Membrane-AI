@@ -19,7 +19,8 @@ linters:
     depguard:
       rules:
         # Enforce the hexagonal dependency rule: the pure domain must not import
-        # the application or adapter layers.
+        # the application or adapter layers (list every service explicitly —
+        # depguard matches import-path prefixes).
         domain-isolation:
           files:
             - "**/internal/domain/**"
@@ -27,6 +28,10 @@ linters:
             - pkg: github.com/Ozgurisikdamar/Membrane-AI/services/ingestion/internal/adapters
               desc: "hexagonal: domain must not import adapters"
             - pkg: github.com/Ozgurisikdamar/Membrane-AI/services/ingestion/internal/app
+              desc: "hexagonal: domain must not import app"
+            - pkg: github.com/Ozgurisikdamar/Membrane-AI/services/orchestrator/internal/adapters
+              desc: "hexagonal: domain must not import adapters"
+            - pkg: github.com/Ozgurisikdamar/Membrane-AI/services/orchestrator/internal/app
               desc: "hexagonal: domain must not import app"
   exclusions:
     rules:

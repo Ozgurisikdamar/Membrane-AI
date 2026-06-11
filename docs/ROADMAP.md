@@ -19,14 +19,17 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done.
 - [x] Dev stack: `deploy/compose/docker-compose.dev.yml` (Redpanda, Redis, pgvector)
 - [x] CI: `.github/workflows/ci.yml` (lint + test + build matrix + buf + race)
 
-## P1 — Core analysis pipeline (next)
+## P1 — Core analysis pipeline (current phase)
 
-- [ ] DB migrations (orgs, gold_codebase_index+pgvector/HNSW, rulesets, verdict_audit, outbox)
-- [ ] **Orchestrator** — Saga state machine consuming `code.submission.v1`; cache-first; 1200 ms deadline
-- [ ] **Redis** Blake3 verdict cache (hit/miss path)
-- [ ] **Static analyzer** — AST parse + secret detection/masking (Go/WASM)
+- [x] DB migrations (orgs, gold_codebase_index+pgvector/HNSW, rulesets, verdict_audit, outbox) + `task migrate`
+- [x] **Orchestrator** — Saga consuming `code.submission.v1`; cache-first; 1200 ms deadline + deterministic
+      fallback; verdicts to `code.verdict.v1`; secret-scan stage as stage 1 + fallback
+- [x] **Redis** Blake3 verdict cache (hit/miss path; 72h TTL; memory fake for tests)
+- [ ] E2E smoke against the dev stack (`task dev-up` + `task migrate` + ingestion→orchestrator flow) — Docker
+      daemon was down this session
+- [ ] **Static analyzer** — AST parse + secret detection/masking (Go/WASM); replaces/extends the secret-scan stage
 - [ ] **Context resolver** + **Aurora/pgvector** gold-codebase index + RAG retrieval
-- [ ] **Transactional outbox** for DB↔Kafka consistency
+- [ ] **Transactional outbox** for DB↔Kafka consistency (schema is ready in 0001_init; relay + shared envelope pkg pending)
 
 ## P2 — Semantic engine, gateway & agentic governance
 

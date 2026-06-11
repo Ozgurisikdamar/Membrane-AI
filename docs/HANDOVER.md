@@ -3,53 +3,53 @@
 > **On "devam et": read this file, then do "Next up". Update this file before the session ends.**
 > Keep it short and current — this is state, not history.
 
-_Last updated: 2026-06-11 — session: docs kit + P0 scaffold + ingestion service._
+_Last updated: 2026-06-11 — session: P1 part 1 (migrations + orchestrator)._
 
 ## Current state
 
-**P0 is complete and green.** Repo at `C:\Dev\Membrane-AI`.
+**P0 done. P1 items 1–2 done and green** (`task ci` passes: lint 0 issues, tests green, build clean
+across `pkg`, `proto`, `services/ingestion`, `services/orchestrator`).
 
-- **Docs + continuity kit**: `CLAUDE.md` + `docs/{ARCHITECTURE,ENGINEERING-STANDARDS,SKILLS,ROADMAP,
-  DECISIONS,HANDOVER}.md`; reports under `docs/report` & `docs/blueprint` (md + figures) and as `.docx`.
-  **Pushed to `main`.**
-- **Monorepo**: `go.work`, `Taskfile.yml`, `.golangci.yml` (v2, hexagonal depguard), `.gitignore/.gitattributes/.editorconfig`, `.github/workflows/ci.yml` (3-OS build/test + lint + race).
-- **`pkg/`** (own module): `config`, `logging` (slog+trace), `errs` (typed), `health`. Tested (87–100%).
-- **`proto/`** (own module): `membrane.ingestion.v1` contract + committed generated stubs (`proto/gen`).
-- **`services/ingestion/`** (own module, hexagonal): domain `Submission` (100%), app `EnqueueSubmission`
-  (100%), ports, adapters = gRPC server (SubmitDiff + StreamCodeDiff), HTTP webhook (HMAC-verifying),
-  Kafka publisher (franz-go) + in-memory publisher, uuid/clock; `cmd/ingestion` composition root with
-  graceful shutdown. Smoke-tested in-memory: `/livez` ok, `/readyz` ready, `POST /webhook` → 202.
-- **Quality**: `task ci` (lint+test+build) **passes**; domain/app layers at 100% coverage.
-- **Commit status**: P0 code committed **locally only — NOT pushed** (waiting for "pushla"). Docs commit
-  was pushed.
+- **Migrations**: `deploy/migrations/0001_init.{up,down}.sql` — orgs, `gold_codebase_index`
+  (pgvector VECTOR(3072) + HNSW), rulesets, `verdict_audit`, `outbox`. Apply with `task migrate`
+  (runs psql inside the compose postgres).
+- **`services/orchestrator/`** (own module, hexagonal): domain `Submission`/`Verdict`/`Consolidate`/
+  Blake3 `CacheKey` (100% cov); app `ProcessSubmission` Saga (97.7% cov) — cache-hit republish,
+  pipeline under 1200 ms deadline, deterministic fallback (never blocks, fallback verdicts NOT cached,
+  cache read/write errors non-fatal); adapters: `rediscache` (72h TTL, Ping), `kafkabus`
+  (consumer group on `code.submission.v1` → Saga; publisher to `code.verdict.v1`, keyed by org),
+  `memorycache`/`memorypublisher` fakes (100%), `stages.SecretScan` (deterministic credential screen,
+  blocking findings; doubles as fallback). Health on `:8102`. In-memory smoke: `/readyz` ready.
+- **Ingestion** unchanged (P0). Envelope JSON is duplicated in ingestion-kafka and orchestrator-kafkabus —
+  keep in sync until a shared schema package lands (planned with the outbox item).
+- **Commits**: everything committed **locally only — NOT pushed** (origin is 2+ commits behind; an
+  earlier push attempt was denied pending the user's "pushla"). Do not push without "pushla".
 
-## Next up  (P1 — core analysis pipeline; see docs/ROADMAP.md)
+## Next up  (P1 continuation; see docs/ROADMAP.md)
 
 Do these in order:
 
-1. **DB migrations** — add SQL for `enterprise_organization`, `gold_codebase_index` (pgvector
-   `VECTOR(3072)` + HNSW), `architectural_rulesets`, `verdict_audit`, `outbox` (transactional outbox).
-   Put under `deploy/migrations/` (and a `task migrate` using golang-migrate or psql).
-2. **`services/orchestrator`** — new Go module (add to `go.work` + Taskfile `GO_MODULES`). Hexagonal.
-   - Consume `code.submission.v1` (franz-go consumer adapter; in-memory consumer fake for tests).
-   - Saga use-case: cache-check → (miss) AST/vector/semantic placeholders → consolidate; honor a 1200 ms
-     deadline with deterministic fallback (Strategy + Circuit Breaker patterns per ENGINEERING-STANDARDS).
-   - **Redis Blake3 verdict cache** adapter (hit/miss) — port `VerdictCache`; in-memory fake.
-   - Domain + app ≥80% tests; wire health (redis ping, consumer lag).
-3. Then continue P1: static analyzer + resolver + pgvector RAG (separate items).
+1. **E2E smoke** (needs Docker Desktop running): `task dev-up` → `task migrate` → run ingestion
+   (Kafka mode) + orchestrator → `POST /webhook` (body sample in `deploy/compose/.env.example` keys)
+   → assert a verdict lands on `code.verdict.v1` (e.g. `docker compose exec redpanda rpk topic consume
+   code.verdict.v1 -n 1`). Fix anything it shakes out.
+2. **Static analyzer service** (`services/analyzer`, ROADMAP P1): AST parse + secret detection/masking
+   (Go; tree-sitter or go/parser per language — start with Go+generic). It becomes a real
+   `AnalysisStage` for the orchestrator (gRPC or library call — decide and record in DECISIONS).
+3. **Context resolver + pgvector RAG** (`services/resolver`): gold-codebase queries per ARCHITECTURE §4.
+4. Then: transactional outbox relay + shared envelope package (replace the duplicated JSON envelopes).
 
-## Blockers / gotchas (read before running anything)
+## Blockers / gotchas
 
-- **Stray `GOWORK`**: a machine-level `GOWORK` points at an unrelated path. ALWAYS run Go via `task`
-  (it sets `GOWORK=off` inline) or prefix commands with `GOWORK=off`. CI sets `GOWORK: off` per job.
-- **`-race`** needs cgo/gcc → not available locally on Windows; the race detector runs in **CI only**.
-- **buf** is the prebuilt binary in `%USERPROFILE%\go\bin` (`go install` of buf fails — upstream build bug).
-  If buf is missing on a fresh machine, download the release exe (see git history / SKILLS).
-- **gh** is authed with the user's classic token this session; if a future session's remote op fails,
-  ask for a classic `repo`+`project` PAT (CLAUDE.md). Push only on "pushla".
+- **Stray `GOWORK`** env on this machine → ALWAYS run Go via `task` or with `GOWORK=off`.
+- **Docker daemon was not running** this session → E2E smoke deferred (step 1 above).
+- **`-race`**: CI-only (no local cgo). **buf**: prebuilt exe in `%USERPROFILE%\go\bin` (see SKILLS).
+- **gh**: authed with the user's classic PAT; push/board ops may be permission-gated — push only on "pushla".
 
 ## How to verify
 
-- `task ci` → lint + test + build all green.
-- `task run:ingestion` (in-memory) → `curl http://localhost:8101/readyz` is ready; `POST` the sample body
-  from `deploy/compose/.env.example` context to `http://localhost:8001/webhook` → 202 with a submission id.
+- `task ci` → all green (4 modules).
+- Orchestrator unit story: `services/orchestrator/internal/app/process_test.go` covers hit/miss/timeout/
+  fallback/publish-failure paths; `task test` shows domain/app ≥97%.
+- In-memory smokes: `task run:ingestion` → readyz + webhook 202; orchestrator with
+  `MEMBRANE_ORCHESTRATOR_USE_IN_MEMORY=true` → `:8102/readyz` ready.
