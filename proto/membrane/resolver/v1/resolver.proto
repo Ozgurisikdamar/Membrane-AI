@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+// Package membrane.resolver.v1 is the contract for the context resolver: RAG
+// retrieval over an organization's "gold codebase" index. Given a diff, it
+// returns the organization's best historical implementations for that
+// language, ready to be injected into the semantic stage's prompt.
+package membrane.resolver.v1;
+
+option go_package = "github.com/Ozgurisikdamar/Membrane-AI/proto/gen/membrane/resolver/v1;resolverv1";
+
+message ResolveContextRequest {
+  // organization_id is the tenant UUID (matches gold_codebase_index.org_id).
+  string organization_id = 1;
+  string language = 2;
+  // diff is embedded and used as the similarity query.
+  string diff = 3;
+  // limit caps returned matches (default 3, max 10).
+  int32 limit = 4;
+}
+
+message GoldMatch {
+  string file_path = 1;
+  string raw_code_content = 2;
+  string architectural_context = 3;
+  // cosine_distance: lower is more similar (0 = identical direction).
+  double cosine_distance = 4;
+}
+
+message ResolveContextResponse {
+  repeated GoldMatch matches = 1;
+}
+
+// ResolverService retrieves gold-codebase context for a submission.
+service ResolverService {
+  rpc ResolveContext(ResolveContextRequest) returns (ResolveContextResponse);
+}

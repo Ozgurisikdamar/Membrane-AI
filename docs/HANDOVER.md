@@ -3,49 +3,50 @@
 > **On "devam et": read this file, then do "Next up". Update this file before the session ends.**
 > Keep it short and current — this is state, not history.
 
-_Last updated: 2026-06-11 — session: P1 part 2 (analyzer service + orchestrator wiring)._
+_Last updated: 2026-06-11 — session: P1 part 3 (E2E proven + resolver service)._
 
 ## Current state
 
-**P0 done. P1: migrations ✓, orchestrator ✓, analyzer ✓.** `task ci` green across **5 modules**
-(`pkg`, `proto`, `services/analyzer`, `services/ingestion`, `services/orchestrator`).
+**P0 done. P1: migrations ✓, orchestrator ✓, analyzer ✓, E2E ✓, resolver ✓.** `task ci` green across
+**6 modules** (`pkg`, `proto`, `services/{analyzer,ingestion,orchestrator,resolver}`).
 
-- **`services/analyzer`** (hexagonal, gRPC `membrane.analyzer.v1` on `:9003`, health `:8103`):
-  - domain detectors (93% cov): `SecretDetector` (5 high-precision patterns, 1-based line numbers,
-    **masking** → `[MASKED:<rule>]` so LLM stages never see raw secrets) + `RiskyPatternDetector`
-    (sql-string-concat, exec-command-concat [go], insecure-tls-skip-verify [go]).
-  - app `AnalyzeDiff` (100%): Strategy chain + mask composition. gRPC adapter bufconn-tested.
-  - Real-process smoke: livez/readyz ok, gRPC port listening.
-- **Orchestrator** gained `grpcstage` (87% cov): remote AnalysisStage calling the analyzer with the Saga's
-  deadline; unknown severities fail safe as warnings. Wired via `MEMBRANE_ORCHESTRATOR_ANALYZER_ADDR`
-  (empty = in-process secret-scan only; secret-scan is ALWAYS the fallback). New decisions: D-018, D-019.
-- Envelope JSON still duplicated between ingestion/orchestrator kafka adapters (shared pkg planned with outbox).
-- **Commits**: all local on `main`, **NOT pushed** (origin several commits behind; push only on "pushla").
-- **Docker daemon would not start** this session (Docker Desktop launched but engine never answered) —
-  E2E smoke still pending.
+- **E2E PROVEN over real infra** (Docker dev stack): webhook POST → ingestion → Kafka → orchestrator →
+  remote analyzer (gRPC) → `rejected` verdict (blocking aws-key + warning insecure-tls) on
+  `code.verdict.v1`; resubmitting the same diff returned `source:"cache"` from Redis (Blake3 path).
+  Migration fix found by E2E: **3072-dim HNSW requires a `halfvec` expression index** (0001 updated; D-020).
+- **`services/resolver`** (hexagonal, gRPC `membrane.resolver.v1` :9004, health :8104): `Query` domain
+  (strict UUID org), `ResolveContext` use-case, **pgx adapter with the halfvec similarity query —
+  verified by a live-DB integration test** (env-guarded: `MEMBRANE_RESOLVER_TEST_DSN`), deterministic
+  stub `Embedder` (signed feature hashing; swap point = `ports.Embedder`). Real-process smoke: readyz
+  ready with postgres=ok.
+- Envelope JSON still duplicated between ingestion/orchestrator kafka adapters.
+- **Commits local on `main`, NOT pushed** (push only on "pushla"). Dev stack containers left running.
 
-## Next up  (P1 continuation; see docs/ROADMAP.md)
+## Next up  (P1 wrap-up → P2; see docs/ROADMAP.md)
 
-1. **E2E smoke** (first session where Docker works): `task dev-up` → `task migrate` → `task run:analyzer`
-   + run orchestrator with `MEMBRANE_ORCHESTRATOR_ANALYZER_ADDR=localhost:9003` + run ingestion (Kafka
-   mode) → `POST` a diff with a fake AWS key to `:8001/webhook` → expect a **rejected** verdict on
-   `code.verdict.v1` (`docker compose -f deploy/compose/docker-compose.dev.yml exec redpanda rpk topic
-   consume code.verdict.v1 -n 1`). If Docker still won't start, skip to item 2 and leave this pending.
-2. **Context resolver + pgvector RAG** (`services/resolver`): gold-codebase schema is migrated; build the
-   service per ARCHITECTURE §4 — embed query path can stub the embedding (fixed vector) until the
-   semantic service exists; design the `GoldIndex` port + postgres adapter (pgx) + RAG retrieval query.
-3. **Transactional outbox relay + shared envelope package** (replace duplicated kafka envelope JSON).
-4. Then: semantic service (Python/FastAPI) — three-tier cost gating.
+1. **Transactional outbox relay + shared envelope package**: extract the submission/verdict envelope
+   JSON into `pkg/envelope` (one schema, both services import it); implement the outbox relay worker
+   (poll `outbox` where `published_at IS NULL` → publish → mark) per D-013; wire verdict_audit writes +
+   outbox in one tx in the orchestrator (it currently publishes verdicts directly — move to outbox).
+2. **Semantic service start (P2, Python/FastAPI)**: scaffold `services/semantic` per
+   ENGINEERING-STANDARDS §8 (ruff+mypy strict, pydantic v2, hexagonal); first endpoint
+   `/v1/semantic/evaluate` with the three-tier cost-gate skeleton (cache assumed upstream; local-model
+   tier stubbed; premium tier behind a feature flag); contract-first: add `proto/membrane/semantic/v1`
+   or HTTP+pydantic (decide and record in DECISIONS).
+3. Then: orchestrator semantic stage + resolver context injection (RAG into the prompt).
 
 ## Blockers / gotchas
 
-- **Stray `GOWORK`** env → ALWAYS `task …` or `GOWORK=off`. **buf** = prebuilt exe in `go/bin`.
-  **`-race`** = CI-only. **Docker** = may need manual Docker Desktop start by the user.
+- **Stray `GOWORK`** env → ALWAYS `task …` or `GOWORK=off`. **buf** = prebuilt exe. **`-race`** = CI-only.
+- Docker Desktop may need a manual start; dev stack: `task dev-up`, migrations: `task migrate`.
+- Resolver integration test needs the dev DB: set `MEMBRANE_RESOLVER_TEST_DSN=postgres://membrane:membrane@localhost:5432/membrane`.
 - **gh**: classic-PAT auth; push/board ops gated — push only on "pushla".
 
 ## How to verify
 
-- `task ci` → all green (5 modules).
-- Analyzer: `task run:analyzer` → `:8103/readyz` ready; bufconn tests cover Analyze (find+mask, invalid, clean).
-- Orchestrator Saga story: `services/orchestrator/internal/app/process_test.go`; remote stage:
-  `internal/adapters/grpcstage/stage_test.go`.
+- `task ci` → all green (6 modules).
+- E2E (15 min): `task dev-up && task migrate`; build+run analyzer, orchestrator
+  (`MEMBRANE_ORCHESTRATOR_ANALYZER_ADDR=localhost:9003`), ingestion; POST a diff with
+  `AKIAIOSFODNN7EXAMPLE` to `:8001/webhook`; `rpk topic consume code.verdict.v1` → rejected verdict;
+  repeat same POST → `source:"cache"`.
+- Resolver: integration test above; `task run:resolver` → `:8104/readyz` shows postgres=ok.

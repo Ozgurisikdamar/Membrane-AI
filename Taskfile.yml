@@ -5,7 +5,7 @@ version: "3"
 # together; see docs/HANDOVER.md). CGO is off for portable local builds.
 
 vars:
-  GO_MODULES: pkg proto services/analyzer services/ingestion services/orchestrator
+  GO_MODULES: pkg proto services/analyzer services/ingestion services/orchestrator services/resolver
 
 tasks:
   default:
@@ -98,3 +98,12 @@ tasks:
       MEMBRANE_ANALYZER_LOG_LEVEL: "debug"
     cmds:
       - go run ./cmd/analyzer
+
+  run:resolver:
+    desc: Run the context resolver service (gRPC :9004, health :8104; needs dev postgres)
+    dir: services/resolver
+    env:
+      GOWORK: "off"
+      MEMBRANE_RESOLVER_LOG_LEVEL: "debug"
+    cmds:
+      - go run ./cmd/resolver

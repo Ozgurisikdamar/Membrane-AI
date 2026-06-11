@@ -25,9 +25,12 @@ CREATE TABLE IF NOT EXISTS gold_codebase_index (
     created_at            TIMESTAMPTZ  NOT NULL DEFAULT now()
 );
 
+-- HNSW caps plain vector columns at 2000 dims; for 3072-dim embeddings the
+-- standard pattern is a halfvec (fp16) expression index. Queries must use the
+-- same expression to hit it:  ORDER BY embedding::halfvec(3072) <=> $1::halfvec(3072).
 CREATE INDEX IF NOT EXISTS gold_codebase_embedding_hnsw
     ON gold_codebase_index
-    USING hnsw (embedding vector_cosine_ops)
+    USING hnsw ((embedding::halfvec(3072)) halfvec_cosine_ops)
     WITH (m = 16, ef_construction = 64);
 
 CREATE INDEX IF NOT EXISTS gold_codebase_org_lang
