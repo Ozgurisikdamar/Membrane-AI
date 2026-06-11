@@ -1,0 +1,38 @@
+# Build output
+/bin/
+/dist/
+*.exe
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+coverage.txt
+coverage.html
+
+# Env / secrets (never commit)
+.env
+.env.*
+!.env.example
+
+# Go
+/vendor/
+go.work.sum
+
+# Node (docs tooling, if ever vendored)
+node_modules/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+
+# Editors / OS
+.idea/
+.vscode/*
+!.vscode/extensions.json
+.DS_Store
+Thumbs.db
