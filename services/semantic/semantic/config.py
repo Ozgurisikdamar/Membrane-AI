@@ -43,6 +43,10 @@ class Config:
     port: int
     premium_enabled: bool
     escalation_threshold: float
+    # vLLM tier-2 endpoint (empty = use the deterministic heuristic only).
+    vllm_url: str
+    vllm_model: str
+    vllm_timeout_seconds: float
 
     @staticmethod
     def load() -> Config:
@@ -57,4 +61,7 @@ class Config:
             port=port,
             premium_enabled=_get_bool("PREMIUM_ENABLED", default=False),
             escalation_threshold=_get_float("ESCALATION_THRESHOLD", 0.5),
+            vllm_url=_get("VLLM_URL", ""),
+            vllm_model=_get("VLLM_MODEL", "deepseek-coder"),
+            vllm_timeout_seconds=_get_float("VLLM_TIMEOUT_SECONDS", 8.0),
         )

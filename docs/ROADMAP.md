@@ -47,7 +47,9 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done.
 - [~] **Semantic AI service** (Python/FastAPI, `:8005`) — hexagonal scaffold + `/v1/semantic/evaluate`
       live; **cost-gate skeleton done** (tier-2 heuristic stub + tier-3 behind `PREMIUM_ENABLED` flag,
       escalation policy in domain, ruff+mypy-strict+pytest green, D-023)
-      - [ ] real tier-2 local model (vLLM) adapter
+      - [x] **tier-2 vLLM adapter** (OpenAI-compatible chat completions, strict-JSON parse, D-028)
+            wrapped in `FallbackLocalModel` → heuristic degradation; enabled via `VLLM_URL`
+            - [ ] point at a real vLLM deployment + tune the prompt against real model output
       - [ ] real tier-3 premium consensus (Claude Sonnet 4.6 + Gemini) adapter + key handling decision
       - [x] **orchestrator semantic stage** (`semanticstage` HTTP adapter w/ Saga deadline) + **resolver
             RAG injection** (`ResolverFetcher`, best-effort) — D-024: `StageResult` threads the masked
@@ -60,7 +62,8 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done.
       - [x] `commit_sha`/`pr_number` plumbed end-to-end (proto → envelope → ingestion → orchestrator →
             verdict; stripped from cache, re-stamped per submission) → **GitHub commit-status adapter
             live & E2E-proven** (`membrane-ai/governance` context)
-      - [ ] PR-comment adapter (findings as a review comment)
+      - [x] **PR-comment adapter** (`github-pr-comment`): markdown comment with fenced findings on
+            `issues/{pr}/comments` when `pr_number` present; same token family, httptest-covered
       - [ ] Redis-backed delivery log for multi-replica
       - [ ] IDE inline-fix channel (with the IDE extension, P3)
 - [ ] Accuracy & evaluation harness (golden datasets, precision/recall, FP-rate SLO)
