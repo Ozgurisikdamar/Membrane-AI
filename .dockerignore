@@ -1,0 +1,13 @@
+# Keep the image build context small: code + module manifests only.
+.git
+.github
+.task
+.env
+bin/
+docs/
+**/.venv
+**/__pycache__
+**/*.egg-info
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache

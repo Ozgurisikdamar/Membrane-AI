@@ -1,0 +1,149 @@
+# All-container dev profile for MEMBRANE.AI (D-029): infra + ALL six services
+# from the locally built images. Self-contained — do not combine with the
+# host-run profile (docker-compose.dev.yml keeps Kafka advertised on localhost
+# for services running on the host; this file advertises on the compose network).
+#
+#   task build:images
+#   docker compose -f deploy/compose/docker-compose.full.yml up -d
+#
+# Service containers are distroless (no shell), so compose healthchecks can't
+# exec inside them — probe readiness from the host instead, e.g.
+#   curl http://localhost:8101/readyz   (ingestion; 8102..8105 for the rest)
+# Host Kafka access (rpk, kcat) goes through the external listener :19092.
+name: membrane-full
+
+services:
+  redpanda:
+    image: redpandadata/redpanda:v24.3.1
+    command:
+      - redpanda start
+      - --smp 1
+      - --overprovisioned
+      - --node-id 0
+      - --kafka-addr internal://0.0.0.0:9092,external://0.0.0.0:19092
+      - --advertise-kafka-addr internal://redpanda:9092,external://localhost:19092
+    ports:
+      - "19092:19092"
+    healthcheck:
+      test: ["CMD-SHELL", "rpk cluster health | grep -q 'Healthy:.*true'"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: membrane
+      POSTGRES_PASSWORD: membrane
+      POSTGRES_DB: membrane
+    volumes:
+      - pgdata-full:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U membrane -d membrane"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # One-shot migration runner (pre-1.0 policy D-022: 0001 evolves in place,
+  # recreate the volume on schema changes: `docker compose ... down -v`).
+  migrate:
+    image: pgvector/pgvector:pg16
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGPASSWORD: membrane
+    volumes:
+      - ../migrations:/migrations:ro
+    entrypoint: ["/bin/sh", "-ce"]
+    command:
+      - for f in /migrations/*.up.sql; do psql -h postgres -U membrane -d membrane -v ON_ERROR_STOP=1 -f "$$f"; done
+    restart: "no"
+
+  ingestion:
+    image: membrane/ingestion:dev
+    depends_on:
+      redpanda:
+        condition: service_healthy
+    environment:
+      MEMBRANE_INGESTION_KAFKA_BROKERS: redpanda:9092
+      MEMBRANE_INGESTION_WEBHOOK_SECRET: ${MEMBRANE_INGESTION_WEBHOOK_SECRET:-}
+    ports:
+      - "9001:9001"   # gRPC
+      - "8001:8001"   # HTTP webhook
+      - "8101:8101"   # health
+
+  analyzer:
+    image: membrane/analyzer:dev
+    ports:
+      - "9003:9003"   # gRPC
+      - "8103:8103"   # health
+
+  resolver:
+    image: membrane/resolver:dev
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      MEMBRANE_RESOLVER_DATABASE_URL: postgres://membrane:membrane@postgres:5432/membrane
+    ports:
+      - "9004:9004"   # gRPC
+      - "8104:8104"   # health
+
+  semantic:
+    image: membrane/semantic:dev
+    environment:
+      MEMBRANE_SEMANTIC_VLLM_URL: ${MEMBRANE_SEMANTIC_VLLM_URL:-}
+      MEMBRANE_SEMANTIC_VLLM_MODEL: ${MEMBRANE_SEMANTIC_VLLM_MODEL:-deepseek-coder}
+    ports:
+      - "8005:8005"   # HTTP + health (D-023)
+
+  orchestrator:
+    image: membrane/orchestrator:dev
+    depends_on:
+      redpanda:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+      analyzer:
+        condition: service_started
+      semantic:
+        condition: service_started
+      resolver:
+        condition: service_started
+    environment:
+      MEMBRANE_ORCHESTRATOR_KAFKA_BROKERS: redpanda:9092
+      MEMBRANE_ORCHESTRATOR_REDIS_ADDR: redis:6379
+      MEMBRANE_ORCHESTRATOR_DATABASE_URL: postgres://membrane:membrane@postgres:5432/membrane
+      MEMBRANE_ORCHESTRATOR_ANALYZER_ADDR: analyzer:9003
+      MEMBRANE_ORCHESTRATOR_SEMANTIC_URL: http://semantic:8005
+      MEMBRANE_ORCHESTRATOR_RESOLVER_ADDR: resolver:9004
+    ports:
+      - "8102:8102"   # health
+
+  reporter:
+    image: membrane/reporter:dev
+    depends_on:
+      redpanda:
+        condition: service_healthy
+    environment:
+      MEMBRANE_REPORTER_KAFKA_BROKERS: redpanda:9092
+      MEMBRANE_REPORTER_WEBHOOK_URL: ${MEMBRANE_REPORTER_WEBHOOK_URL:-}
+      MEMBRANE_REPORTER_GITHUB_TOKEN: ${MEMBRANE_REPORTER_GITHUB_TOKEN:-}
+      MEMBRANE_REPORTER_GITHUB_API_URL: ${MEMBRANE_REPORTER_GITHUB_API_URL:-}
+    ports:
+      - "8105:8105"   # health
+
+volumes:
+  pgdata-full:
