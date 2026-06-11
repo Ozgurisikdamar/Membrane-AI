@@ -78,7 +78,7 @@ jobs:
           go-version: "1.25"
       - name: Test with race detector
         run: |
-          for m in pkg proto services/analyzer services/ingestion services/orchestrator services/reporter services/resolver; do
+          for m in clients/cli pkg proto services/analyzer services/ingestion services/orchestrator services/reporter services/resolver; do
             (cd "$m" && go test -race ./...)
           done
 

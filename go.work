@@ -1,6 +1,7 @@
 go 1.25
 
 use (
+	./clients/cli
 	./pkg
 	./proto
 	./services/analyzer

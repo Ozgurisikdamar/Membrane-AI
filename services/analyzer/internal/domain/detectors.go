@@ -2,17 +2,17 @@ package domain
 
 import (
 	"context"
-	"fmt"
-	"regexp"
-	"strings"
+
+	"github.com/Ozgurisikdamar/Membrane-AI/pkg/scan"
 )
 
 // Detector is one deterministic analysis Strategy. Implementations must be
 // pure (no I/O) and honor ctx cancellation on long inputs.
 //
-// AST-based detectors require full-file content, which arrives with the
-// context-resolver integration (ROADMAP P1) — v1 detectors are line-scan based
-// (see DECISIONS D-019).
+// The actual pattern logic lives in pkg/scan — the single source of truth
+// shared with the orchestrator's fallback stage and the Code Sweeper CLI.
+// AST-based detectors require full-file content and land with the
+// context-resolver integration (DECISIONS D-019).
 type Detector interface {
 	Name() string
 	Detect(ctx context.Context, in Input) ([]Finding, error)
@@ -24,28 +24,31 @@ type Masker interface {
 	Mask(diff string) string
 }
 
-// --- secret detector ---------------------------------------------------------
-
-type secretPattern struct {
-	rule string
-	re   *regexp.Regexp
-}
-
-// High-precision detectors only: false positives erode developer trust.
-var secretPatterns = []secretPattern{
-	{"private-key-block", regexp.MustCompile(`-----BEGIN (?:RSA |EC |OPENSSH |DSA |PGP )?PRIVATE KEY[^\n]*`)},
-	{"aws-access-key-id", regexp.MustCompile(`\bAKIA[0-9A-Z]{16}\b`)},
-	{"github-token", regexp.MustCompile(`\bgh[pousr]_[A-Za-z0-9]{20,}\b`)},
-	{"slack-token", regexp.MustCompile(`\bxox[baprs]-[A-Za-z0-9-]{10,}\b`)},
-	// No leading \b: prefixed identifiers (db_password, user_token, …) must match.
-	{"generic-assigned-secret", regexp.MustCompile(`(?i)(?:password|passwd|secret|api[_-]?key|token)\s*[:=]\s*["'][^"']{8,}["']`)},
+func fromScan(fs []scan.Finding) []Finding {
+	if len(fs) == 0 {
+		return nil
+	}
+	out := make([]Finding, 0, len(fs))
+	for _, f := range fs {
+		out = append(out, Finding{
+			Rule:     f.Rule,
+			Severity: Severity(f.Severity), // identical value sets by design
+			Message:  f.Message,
+			Line:     f.Line,
+		})
+	}
+	return out
 }
 
 // SecretDetector finds leaked credentials line by line and can mask them.
-type SecretDetector struct{}
+type SecretDetector struct {
+	inner *scan.SecretDetector
+}
 
 // NewSecretDetector returns the detector with the default pattern set.
-func NewSecretDetector() *SecretDetector { return &SecretDetector{} }
+func NewSecretDetector() *SecretDetector {
+	return &SecretDetector{inner: scan.NewSecretDetector()}
+}
 
 // Name implements Detector.
 func (*SecretDetector) Name() string { return "secret" }
@@ -53,93 +56,35 @@ func (*SecretDetector) Name() string { return "secret" }
 // Detect reports every credential match as a blocking finding with its
 // 1-based diff line number.
 func (d *SecretDetector) Detect(ctx context.Context, in Input) ([]Finding, error) {
-	var findings []Finding
-	for i, line := range strings.Split(in.Diff, "\n") {
-		if err := ctx.Err(); err != nil {
-			return nil, err
-		}
-		for _, p := range secretPatterns {
-			if p.re.MatchString(line) {
-				findings = append(findings, Finding{
-					Rule:     p.rule,
-					Severity: SeverityBlocking,
-					Message:  fmt.Sprintf("potential credential detected (%s); remove and rotate it", p.rule),
-					Line:     i + 1,
-				})
-			}
-		}
+	fs, err := d.inner.Detect(ctx, in.Diff, in.Language)
+	if err != nil {
+		return nil, err
 	}
-	return findings, nil
+	return fromScan(fs), nil
 }
 
 // Mask replaces every detected secret value with a [MASKED:<rule>] placeholder
 // so downstream (semantic/LLM) stages never see the raw credential.
-func (*SecretDetector) Mask(diff string) string {
-	masked := diff
-	for _, p := range secretPatterns {
-		masked = p.re.ReplaceAllString(masked, "[MASKED:"+p.rule+"]")
-	}
-	return masked
-}
-
-// --- risky-pattern detector ---------------------------------------------------
-
-type riskyPattern struct {
-	rule     string
-	severity Severity
-	message  string
-	re       *regexp.Regexp
-	// language restricts the rule ("" = any language).
-	language string
-}
-
-var riskyPatterns = []riskyPattern{
-	{
-		rule: "sql-string-concat", severity: SeverityWarning,
-		message: "SQL built by string concatenation; use parameterized queries",
-		re:      regexp.MustCompile(`(?i)\b(?:query|exec|prepare)\w*\(\s*"[^"]*"\s*\+`),
-	},
-	{
-		rule: "exec-command-concat", severity: SeverityWarning,
-		message: "command built from concatenated input; risk of command injection",
-		re:      regexp.MustCompile(`exec\.Command\w*\([^)]*\+`), language: "go",
-	},
-	{
-		rule: "insecure-tls-skip-verify", severity: SeverityWarning,
-		message: "TLS certificate verification disabled (InsecureSkipVerify)",
-		re:      regexp.MustCompile(`InsecureSkipVerify\s*:\s*true`), language: "go",
-	},
-}
+func (d *SecretDetector) Mask(diff string) string { return d.inner.Mask(diff) }
 
 // RiskyPatternDetector flags well-known insecure coding patterns.
-type RiskyPatternDetector struct{}
+type RiskyPatternDetector struct {
+	inner *scan.RiskyPatternDetector
+}
 
 // NewRiskyPatternDetector returns the detector with the default rule set.
-func NewRiskyPatternDetector() *RiskyPatternDetector { return &RiskyPatternDetector{} }
+func NewRiskyPatternDetector() *RiskyPatternDetector {
+	return &RiskyPatternDetector{inner: scan.NewRiskyPatternDetector()}
+}
 
 // Name implements Detector.
 func (*RiskyPatternDetector) Name() string { return "risky-pattern" }
 
 // Detect reports insecure patterns applicable to the input's language.
 func (d *RiskyPatternDetector) Detect(ctx context.Context, in Input) ([]Finding, error) {
-	var findings []Finding
-	for i, line := range strings.Split(in.Diff, "\n") {
-		if err := ctx.Err(); err != nil {
-			return nil, err
-		}
-		for _, p := range riskyPatterns {
-			if p.language != "" && p.language != in.Language {
-				continue
-			}
-			if p.re.MatchString(line) {
-				findings = append(findings, Finding{
-					Rule:     p.rule,
-					Severity: p.severity,
-					Message:  p.message,
-					Line:     i + 1,
-				})
-			}
-		}
+	fs, err := d.inner.Detect(ctx, in.Diff, in.Language)
+	if err != nil {
+		return nil, err
 	}
-	return findings, nil
+	return fromScan(fs), nil
 }

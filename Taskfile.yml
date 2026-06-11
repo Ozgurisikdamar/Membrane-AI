@@ -5,7 +5,7 @@ version: "3"
 # together; see docs/HANDOVER.md). CGO is off for portable local builds.
 
 vars:
-  GO_MODULES: pkg proto services/analyzer services/ingestion services/orchestrator services/reporter services/resolver
+  GO_MODULES: clients/cli pkg proto services/analyzer services/ingestion services/orchestrator services/reporter services/resolver
   # Path to the semantic service's venv interpreter (created by task setup:py).
   SEMANTIC_PY: '{{if eq OS "windows"}}.venv/Scripts/python.exe{{else}}.venv/bin/python{{end}}'
 
@@ -83,6 +83,15 @@ tasks:
       MEMBRANE_SEMANTIC_PORT: "8005"
     cmds:
       - '{{.SEMANTIC_PY}} -m semantic.main'
+
+  build:cli:
+    desc: Build the static Code Sweeper binary into bin/ (CGO off, current platform)
+    dir: clients/cli
+    env:
+      GOWORK: "off"
+      CGO_ENABLED: "0"
+    cmds:
+      - go build -trimpath -ldflags "-s -w" -o ../../bin/membrane{{exeExt}} ./cmd/membrane
 
   ci:
     desc: Full local CI gate (run before "pushla")
