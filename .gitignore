@@ -39,3 +39,6 @@ Thumbs.db
 
 # go-task internal cache
 .task/
+
+# Python packaging metadata
+*.egg-info/
