@@ -33,6 +33,10 @@ linters:
               desc: "hexagonal: domain must not import adapters"
             - pkg: github.com/Ozgurisikdamar/Membrane-AI/services/orchestrator/internal/app
               desc: "hexagonal: domain must not import app"
+            - pkg: github.com/Ozgurisikdamar/Membrane-AI/services/analyzer/internal/adapters
+              desc: "hexagonal: domain must not import adapters"
+            - pkg: github.com/Ozgurisikdamar/Membrane-AI/services/analyzer/internal/app
+              desc: "hexagonal: domain must not import app"
   exclusions:
     rules:
       # Tests may ignore some return values and are not security-sensitive.

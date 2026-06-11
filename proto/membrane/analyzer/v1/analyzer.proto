@@ -1,0 +1,48 @@
+syntax = "proto3";
+
+// Package membrane.analyzer.v1 is the contract for the static analyzer
+// service: deterministic, language-aware detection of security findings in a
+// diff, plus secret masking so downstream (semantic) stages never see raw
+// credentials.
+package membrane.analyzer.v1;
+
+option go_package = "github.com/Ozgurisikdamar/Membrane-AI/proto/gen/membrane/analyzer/v1;analyzerv1";
+
+// Severity grades a finding.
+enum Severity {
+  SEVERITY_UNSPECIFIED = 0;
+  SEVERITY_INFO = 1;
+  SEVERITY_WARNING = 2;
+  SEVERITY_BLOCKING = 3;
+}
+
+message AnalyzeRequest {
+  string submission_id = 1;
+  string organization_id = 2;
+  string repository = 3;
+  string file_path = 4;
+  string language = 5;
+  // diff is the unified diff under review.
+  string diff = 6;
+}
+
+message Finding {
+  // rule is the stable detector rule id (e.g. "aws-access-key-id").
+  string rule = 1;
+  Severity severity = 2;
+  string message = 3;
+  // line is the 1-based line number within the diff text (0 = unknown).
+  int32 line = 4;
+}
+
+message AnalyzeResponse {
+  repeated Finding findings = 1;
+  // masked_diff is the diff with every detected secret value replaced by a
+  // [MASKED:<rule>] placeholder; equal to the input when nothing was detected.
+  string masked_diff = 2;
+}
+
+// AnalyzerService runs deterministic static analysis on a submission.
+service AnalyzerService {
+  rpc Analyze(AnalyzeRequest) returns (AnalyzeResponse);
+}

@@ -16,6 +16,7 @@ import (
 
 	"github.com/Ozgurisikdamar/Membrane-AI/pkg/health"
 	"github.com/Ozgurisikdamar/Membrane-AI/pkg/logging"
+	"github.com/Ozgurisikdamar/Membrane-AI/services/orchestrator/internal/adapters/grpcstage"
 	"github.com/Ozgurisikdamar/Membrane-AI/services/orchestrator/internal/adapters/kafkabus"
 	"github.com/Ozgurisikdamar/Membrane-AI/services/orchestrator/internal/adapters/memorycache"
 	"github.com/Ozgurisikdamar/Membrane-AI/services/orchestrator/internal/adapters/memorypublisher"
@@ -103,12 +104,31 @@ func wire(cfg config.Config, fallback ports.AnalysisStage, healthH *health.Handl
 		FallbackDeadline: cfg.FallbackDeadline,
 		RulesetVersion:   cfg.RulesetVersion,
 	}
-	stagesChain := []ports.AnalysisStage{fallback} // secret-scan is stage 1 until the analyzer service lands (ROADMAP P1)
+
+	// Stage chain: the remote analyzer when configured, else the in-process
+	// secret scan. The secret scan always remains the deterministic fallback.
+	stagesChain := []ports.AnalysisStage{fallback}
+	var stageCleanup func()
+	if cfg.AnalyzerAddr != "" {
+		remote, rerr := grpcstage.New(cfg.AnalyzerAddr)
+		if rerr != nil {
+			return nil, nil, nil, rerr
+		}
+		stagesChain = []ports.AnalysisStage{remote}
+		stageCleanup = func() { _ = remote.Close() }
+		log.Info("analyzer stage enabled", "addr", cfg.AnalyzerAddr)
+	}
+
+	closeStage := func() {
+		if stageCleanup != nil {
+			stageCleanup()
+		}
+	}
 
 	if cfg.UseInMemory {
 		saga := app.NewProcessSubmission(
 			memorycache.New(), stagesChain, fallback, memorypublisher.New(), systemClock{}, opts)
-		return saga, nil, func() {}, nil
+		return saga, nil, closeStage, nil
 	}
 
 	cache := rediscache.New(cfg.RedisAddr, cfg.CacheTTL)
@@ -117,6 +137,7 @@ func wire(cfg config.Config, fallback ports.AnalysisStage, healthH *health.Handl
 	publisher, err := kafkabus.NewPublisher(cfg.KafkaBrokers, cfg.VerdictTopic)
 	if err != nil {
 		_ = cache.Close()
+		closeStage()
 		return nil, nil, nil, err
 	}
 
@@ -126,6 +147,7 @@ func wire(cfg config.Config, fallback ports.AnalysisStage, healthH *health.Handl
 	if err != nil {
 		publisher.Close()
 		_ = cache.Close()
+		closeStage()
 		return nil, nil, nil, err
 	}
 	healthH.Register("kafka", consumer.Ping)
@@ -134,6 +156,7 @@ func wire(cfg config.Config, fallback ports.AnalysisStage, healthH *health.Handl
 		consumer.Close()
 		publisher.Close()
 		_ = cache.Close()
+		closeStage()
 	}
 	return saga, consumer, cleanup, nil
 }

@@ -11,12 +11,15 @@ import (
 
 // Config holds all runtime settings for the orchestrator service.
 type Config struct {
-	HealthAddr       string
-	KafkaBrokers     []string
-	SubmissionTopic  string
-	VerdictTopic     string
-	ConsumerGroup    string
-	RedisAddr        string
+	HealthAddr      string
+	KafkaBrokers    []string
+	SubmissionTopic string
+	VerdictTopic    string
+	ConsumerGroup   string
+	RedisAddr       string
+	// AnalyzerAddr is the gRPC address of the analyzer service; empty means
+	// "use the in-process secret-scan stage only".
+	AnalyzerAddr     string
 	CacheTTL         time.Duration
 	StageDeadline    time.Duration
 	FallbackDeadline time.Duration
@@ -35,6 +38,7 @@ func Load() (Config, error) {
 		VerdictTopic:     l.String("VERDICT_TOPIC", "code.verdict.v1"),
 		ConsumerGroup:    l.String("CONSUMER_GROUP", "orchestrator"),
 		RedisAddr:        l.String("REDIS_ADDR", "localhost:6379"),
+		AnalyzerAddr:     l.String("ANALYZER_ADDR", ""),
 		CacheTTL:         l.Duration("CACHE_TTL", 72*time.Hour),
 		StageDeadline:    l.Duration("STAGE_DEADLINE", 1200*time.Millisecond),
 		FallbackDeadline: l.Duration("FALLBACK_DEADLINE", 200*time.Millisecond),

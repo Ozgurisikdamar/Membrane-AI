@@ -21,7 +21,7 @@ pipeline in sub-millisecond time.
 | `clients/cli` | Go | "Code Sweeper" CLI + local agent (static analysis, masking) — single static binary. |
 | `services/ingestion` | Go | gRPC duplex stream (IDE) + Git webhooks (HTTP) → publish `code.submission.v1` keyed by org UUID. **(P0)** |
 | `services/orchestrator` | Go | Saga state machine: cache → AST → vector → semantic → consensus; 1200 ms IDE deadline + deterministic fallback. |
-| `services/analyzer` | Go/WASM | Deterministic AST parse, regex/NER secret detection & masking. |
+| `services/analyzer` | Go | Deterministic static analysis (gRPC `membrane.analyzer.v1`): secret detection + masking, risky-pattern rules; AST detectors land with resolver-provided full files (D-019). |
 | `services/resolver` | Go | Repo metadata + gold-codebase vector queries (pgvector HNSW). |
 | `services/semantic` | Python/FastAPI | Dual-model consensus (local vLLM + cloud), consensus resolution. |
 | `services/reporter` | Go | Verdicts → IDE inline fixes, PR status/comments, Slack/Jira/SIEM; writes audit. |

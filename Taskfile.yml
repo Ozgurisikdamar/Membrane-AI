@@ -5,7 +5,7 @@ version: "3"
 # together; see docs/HANDOVER.md). CGO is off for portable local builds.
 
 vars:
-  GO_MODULES: pkg proto services/ingestion services/orchestrator
+  GO_MODULES: pkg proto services/analyzer services/ingestion services/orchestrator
 
 tasks:
   default:
@@ -89,3 +89,12 @@ tasks:
       MEMBRANE_ORCHESTRATOR_LOG_LEVEL: "debug"
     cmds:
       - go run ./cmd/orchestrator
+
+  run:analyzer:
+    desc: Run the static analyzer service (gRPC :9003, health :8103)
+    dir: services/analyzer
+    env:
+      GOWORK: "off"
+      MEMBRANE_ANALYZER_LOG_LEVEL: "debug"
+    cmds:
+      - go run ./cmd/analyzer

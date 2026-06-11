@@ -25,9 +25,12 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done.
 - [x] **Orchestrator** — Saga consuming `code.submission.v1`; cache-first; 1200 ms deadline + deterministic
       fallback; verdicts to `code.verdict.v1`; secret-scan stage as stage 1 + fallback
 - [x] **Redis** Blake3 verdict cache (hit/miss path; 72h TTL; memory fake for tests)
-- [ ] E2E smoke against the dev stack (`task dev-up` + `task migrate` + ingestion→orchestrator flow) — Docker
-      daemon was down this session
-- [ ] **Static analyzer** — AST parse + secret detection/masking (Go/WASM); replaces/extends the secret-scan stage
+- [ ] E2E smoke against the dev stack (`task dev-up` + `task migrate` + ingestion→analyzer→orchestrator flow) —
+      Docker daemon would not come up this session either
+- [x] **Static analyzer service** (`services/analyzer`, gRPC `membrane.analyzer.v1`) — secret detection with
+      line numbers + **masking** (`[MASKED:<rule>]`), risky-pattern rules (SQL/exec concat, InsecureSkipVerify);
+      orchestrator `grpcstage` adapter wired via `ANALYZER_ADDR` (D-018/D-019). AST detectors deferred to
+      resolver integration (full-file content needed)
 - [ ] **Context resolver** + **Aurora/pgvector** gold-codebase index + RAG retrieval
 - [ ] **Transactional outbox** for DB↔Kafka consistency (schema is ready in 0001_init; relay + shared envelope pkg pending)
 
