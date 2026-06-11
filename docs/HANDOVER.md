@@ -3,7 +3,7 @@
 > **On "devam et": read this file, then do "Next up". Update this file before the session ends.**
 > Keep it short and current — this is state, not history.
 
-_Last updated: 2026-06-11 — session: P3 part 5 (Helm chart, D-030)._
+_Last updated: 2026-06-11 — session: P3 part 6 (premium tier-3 consensus, D-031)._
 
 ## Push policy
 
@@ -20,8 +20,23 @@ The user pushes manually (`git push` in their own terminal). Check pending:
 
 ## Current state
 
-**P0 ✓ P1 ✓ P2 ✓ — P3 in flight.** `task ci` green: 8 Go modules + Python (24 pytest);
+**P0 ✓ P1 ✓ P2 ✓ — P3 in flight.** `task ci` green: 8 Go modules + Python (36 pytest);
 `task helm:lint` green (helm lint + template + kubeconform 12/12).
+
+- **Premium tier-3 consensus done (D-031)**: `semantic/adapters/premium_consensus.py` — Claude
+  Sonnet 4.6 (Anthropic Messages API) + Gemini (generateContent) via httpx, NO SDK. `DualModelConsensus`
+  runs reviewers concurrently with a per-reviewer `asyncio.wait_for` deadline, merges findings tagged
+  `premium:<model>:<rule>`, degrades to the survivor on partial failure (outage surfaced as an `info`
+  finding), and raises only if ALL fail. API keys from env (`MEMBRANE_SEMANTIC_ANTHROPIC_API_KEY` /
+  `_GEMINI_API_KEY`); wired behind `PREMIUM_ENABLED` + a key (keyless-but-enabled keeps the disabled
+  stub → fails loud). Surfaced in `.env.example`, the full compose, and the Helm chart (credentials
+  Secret + infra toggles).
+- **Hardened by the adapter's multi-agent review** (7 confirmed, all fixed): httpx clients now closed
+  via a FastAPI **lifespan** (`create_app(evaluate, closeables)`); overall consensus **deadline**
+  (per-reviewer wait_for); `CancelledError` propagates instead of degrading; `_anthropic_text`/
+  `_gemini_text`/`_decode` guard non-dict bodies, missing `text` keys, and non-JSON 200s →
+  `PremiumConsensusError`; outage messages **sanitized** (`_summarize_error` → `HTTP <code>`/`timeout`,
+  never the request URL or key).
 
 - **Helm chart done (D-030)**: `deploy/helm/membrane` — one generic Deployment/Service template
   loops over `.Values.services` (6 services); infra (Kafka/Redis/Postgres/vLLM) as external
@@ -66,11 +81,11 @@ The user pushes manually (`git push` in their own terminal). Check pending:
 
 ## Next up  (P3 continuation; see docs/ROADMAP.md)
 
-1. **Premium tier-3 consensus adapter** (Claude Sonnet 4.6 + Gemini): needs an API-key handling
-   decision (env vs file vs vault) — record as **D-031** when built; until then the flag stays off.
-2. **CLI packaging matrix** (winget/brew/deb/rpm/tarball) or **accuracy/eval harness** — pick per
-   GTM priority.
-3. **Observability** (OpenTelemetry traces/metrics across services) — the SRE story.
+1. **Observability** (OpenTelemetry traces/metrics/logs across services) — the SRE story; the deps
+   table in ENGINEERING-STANDARDS already names OTel.
+2. **CLI packaging matrix** (winget/brew/deb/rpm/tarball) — release engineering for the Code Sweeper.
+3. **Accuracy & evaluation harness** (golden datasets, precision/recall, FP-rate SLO) — the quality
+   bar for the analysis pipeline.
 
 ## How to verify
 
@@ -84,3 +99,5 @@ The user pushes manually (`git push` in their own terminal). Check pending:
   Tear down with `task full-down`.
 - PR comment story: `services/reporter/internal/adapters/notify/githubprcomment_test.go`.
 - vLLM story: `services/semantic/tests/test_vllm.py`.
+- Premium story: `services/semantic/tests/test_premium.py` (parse/coerce, partial-failure degrade,
+  all-fail raise, overall timeout, sanitized outage message, non-JSON 200 / missing-text guards).

@@ -5,6 +5,9 @@ Pydantic models live here, at the boundary; they map to/from the pure domain.
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator, Sequence
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
@@ -50,10 +53,21 @@ class EvaluateResponse(BaseModel):
     escalated: bool
 
 
-def create_app(evaluate: EvaluateDiff) -> FastAPI:
+def create_app(evaluate: EvaluateDiff, closeables: Sequence[object] = ()) -> FastAPI:
     """Build the FastAPI app around the injected use-case (composition root
-    passes the wired EvaluateDiff in — no globals)."""
-    app = FastAPI(title="MEMBRANE.AI semantic service", version="0.1.0")
+    passes the wired EvaluateDiff in — no globals). `closeables` are adapters
+    holding network clients; their `aclose()` runs on shutdown so connection
+    pools drain gracefully (ENGINEERING-STANDARDS §4)."""
+
+    @asynccontextmanager
+    async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+        yield
+        for c in closeables:
+            aclose = getattr(c, "aclose", None)
+            if aclose is not None:
+                await aclose()
+
+    app = FastAPI(title="MEMBRANE.AI semantic service", version="0.1.0", lifespan=lifespan)
 
     @app.get("/livez")
     async def livez() -> dict[str, str]:

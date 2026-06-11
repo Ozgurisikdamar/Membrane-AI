@@ -47,6 +47,14 @@ class Config:
     vllm_url: str
     vllm_model: str
     vllm_timeout_seconds: float
+    # Tier-3 premium consensus credentials (D-031). Keys come from the env /
+    # Helm Secret; an empty key drops that reviewer. With premium_enabled and
+    # no key at all, the disabled stub stays wired and escalation fails loud.
+    premium_anthropic_api_key: str
+    premium_anthropic_model: str
+    premium_gemini_api_key: str
+    premium_gemini_model: str
+    premium_timeout_seconds: float
 
     @staticmethod
     def load() -> Config:
@@ -64,4 +72,9 @@ class Config:
             vllm_url=_get("VLLM_URL", ""),
             vllm_model=_get("VLLM_MODEL", "deepseek-coder"),
             vllm_timeout_seconds=_get_float("VLLM_TIMEOUT_SECONDS", 8.0),
+            premium_anthropic_api_key=_get("ANTHROPIC_API_KEY", ""),
+            premium_anthropic_model=_get("PREMIUM_ANTHROPIC_MODEL", "claude-sonnet-4-6"),
+            premium_gemini_api_key=_get("GEMINI_API_KEY", ""),
+            premium_gemini_model=_get("PREMIUM_GEMINI_MODEL", "gemini-2.5-pro"),
+            premium_timeout_seconds=_get_float("PREMIUM_TIMEOUT_SECONDS", 30.0),
         )

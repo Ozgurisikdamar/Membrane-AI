@@ -26,6 +26,11 @@ infra:
   vllmModel: "deepseek-coder"
   # GitHub API base URL for the reporter (only for GitHub Enterprise).
   githubApiUrl: ""
+  # Tier-3 premium consensus (D-031). Off unless premiumEnabled AND a key is set
+  # (keys live in credentials below). Flag on with no key = fails loud (503).
+  premiumEnabled: false
+  premiumAnthropicModel: "claude-sonnet-4-6"
+  premiumGeminiModel: "gemini-2.5-pro"
 
 # Sensitive values land in one Secret; only non-empty keys are rendered, and
 # with no credentials at all the Secret is omitted. databaseUrl is treated as
@@ -43,6 +48,9 @@ credentials:
   githubToken: ""
   # Slack-compatible webhook URL for the reporter (secret-bearing: embeds a token).
   webhookUrl: ""
+  # Tier-3 premium consensus API keys (D-031); each empty key drops that reviewer.
+  anthropicApiKey: ""
+  geminiApiKey: ""
 
 # Credential keys whose secretKeyRef must be non-optional (fail-fast when the
 # owning service is enabled but the value is missing).
@@ -163,7 +171,12 @@ services:
     env:
       MEMBRANE_SEMANTIC_VLLM_URL: "{{ .Values.infra.vllmUrl }}"
       MEMBRANE_SEMANTIC_VLLM_MODEL: "{{ .Values.infra.vllmModel }}"
-    secretEnv: {}
+      MEMBRANE_SEMANTIC_PREMIUM_ENABLED: "{{ .Values.infra.premiumEnabled }}"
+      MEMBRANE_SEMANTIC_PREMIUM_ANTHROPIC_MODEL: "{{ .Values.infra.premiumAnthropicModel }}"
+      MEMBRANE_SEMANTIC_PREMIUM_GEMINI_MODEL: "{{ .Values.infra.premiumGeminiModel }}"
+    secretEnv:
+      MEMBRANE_SEMANTIC_ANTHROPIC_API_KEY: anthropicApiKey
+      MEMBRANE_SEMANTIC_GEMINI_API_KEY: geminiApiKey
     resources:
       requests:
         cpu: 100m

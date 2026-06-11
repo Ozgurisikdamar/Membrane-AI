@@ -50,7 +50,10 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done.
       - [x] **tier-2 vLLM adapter** (OpenAI-compatible chat completions, strict-JSON parse, D-028)
             wrapped in `FallbackLocalModel` → heuristic degradation; enabled via `VLLM_URL`
             - [ ] point at a real vLLM deployment + tune the prompt against real model output
-      - [ ] real tier-3 premium consensus (Claude Sonnet 4.6 + Gemini) adapter + key handling decision
+      - [x] **real tier-3 premium consensus** (`premium_consensus.py`, D-031): Claude Sonnet 4.6
+            (Anthropic Messages API) + Gemini (generateContent) via httpx, concurrent, partial-failure
+            tolerant; env-based API keys; enabled via `PREMIUM_ENABLED` + a key
+            - [ ] point at real API keys + tune prompts against real model output
       - [x] **orchestrator semantic stage** (`semanticstage` HTTP adapter w/ Saga deadline) + **resolver
             RAG injection** (`ResolverFetcher`, best-effort) — D-024: `StageResult` threads the masked
             diff to later stages; `app.Optional` decorator keeps advisory failures non-fatal
