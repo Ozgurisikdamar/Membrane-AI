@@ -21,6 +21,21 @@ func TestNewSubmission_Valid(t *testing.T) {
 	}
 }
 
+func TestWithSource(t *testing.T) {
+	base, err := domain.NewSubmission("o", "r", "f", "go", "d", domain.OriginWebhook)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := base.WithSource("  abc123  ", 42)
+	if s.CommitSHA != "abc123" || s.PRNumber != 42 {
+		t.Fatalf("source = %q/%d", s.CommitSHA, s.PRNumber)
+	}
+	neg := base.WithSource("", -1)
+	if neg.CommitSHA != "" || neg.PRNumber != 0 {
+		t.Fatalf("negative PR must be absent: %+v", neg)
+	}
+}
+
 func TestNewSubmission_NormalizesUnknownOrigin(t *testing.T) {
 	got, err := domain.NewSubmission("o", "r", "f", "go", "d", domain.Origin("weird"))
 	if err != nil {

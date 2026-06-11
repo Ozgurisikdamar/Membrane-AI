@@ -77,7 +77,7 @@ func toDomain(cs *ingestionv1.CodeSubmission) (domain.Submission, error) {
 	if cs == nil {
 		return domain.Submission{}, pkgerrs.Validation("ingestion.grpc", "submission is required", nil)
 	}
-	return domain.NewSubmission(
+	sub, err := domain.NewSubmission(
 		cs.GetOrganizationId(),
 		cs.GetRepository(),
 		cs.GetFilePath(),
@@ -85,6 +85,10 @@ func toDomain(cs *ingestionv1.CodeSubmission) (domain.Submission, error) {
 		cs.GetDiff(),
 		originFromProto(cs.GetOrigin()),
 	)
+	if err != nil {
+		return domain.Submission{}, err
+	}
+	return sub.WithSource(cs.GetCommitSha(), int(cs.GetPrNumber())), nil
 }
 
 func originFromProto(o ingestionv1.Origin) domain.Origin {

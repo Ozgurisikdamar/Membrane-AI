@@ -26,6 +26,11 @@ message CodeSubmission {
   // diff is the unified diff of the change under review.
   string diff = 5;
   Origin origin = 6;
+  // commit_sha optionally identifies the commit under review; required for
+  // commit-status reporting (empty when the client cannot provide it).
+  string commit_sha = 7;
+  // pr_number optionally identifies the pull/merge request (0 = none).
+  int32 pr_number = 8;
 }
 
 message SubmitDiffRequest {

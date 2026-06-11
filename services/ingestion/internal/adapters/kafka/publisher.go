@@ -48,6 +48,8 @@ func (p *Publisher) Publish(ctx context.Context, e ports.Event) error {
 		Origin:         string(e.Submission.Origin),
 		Diff:           e.Submission.Diff,
 		OccurredAt:     e.OccurredAt,
+		CommitSHA:      e.Submission.CommitSHA,
+		PRNumber:       e.Submission.PRNumber,
 	})
 	if err != nil {
 		return errs.Internal(op, "marshal event", err)

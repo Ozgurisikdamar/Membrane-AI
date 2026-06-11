@@ -46,6 +46,8 @@ type payload struct {
 	FilePath       string `json:"file_path"`
 	Language       string `json:"language"`
 	Diff           string `json:"diff"`
+	CommitSHA      string `json:"commit_sha"`
+	PRNumber       int    `json:"pr_number"`
 }
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -72,6 +74,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		writeError(w, httpStatus(pkgerrs.KindOf(err)), err.Error())
 		return
 	}
+	sub = sub.WithSource(p.CommitSHA, p.PRNumber)
 	res, err := h.enqueue.Handle(r.Context(), sub)
 	if err != nil {
 		writeError(w, httpStatus(pkgerrs.KindOf(err)), err.Error())

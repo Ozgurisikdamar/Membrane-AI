@@ -78,9 +78,7 @@ func (uc *ProcessSubmission) Handle(ctx context.Context, sub domain.Submission) 
 	key := domain.CacheKey(sub.Diff, uc.opts.RulesetVersion)
 
 	if cached, hit, err := uc.cache.Get(ctx, key); err == nil && hit {
-		verdict := cached
-		verdict.SubmissionID = sub.SubmissionID
-		verdict.OrganizationID = sub.OrganizationID
+		verdict := cached.StampSource(sub)
 		verdict.Source = domain.SourceCache
 		if err := uc.publisher.Publish(ctx, verdict); err != nil {
 			return domain.Verdict{}, errs.Unavailable(opProcess, "publish cached verdict", err)
@@ -93,12 +91,10 @@ func (uc *ProcessSubmission) Handle(ctx context.Context, sub domain.Submission) 
 	verdict := uc.analyze(ctx, sub)
 
 	// Cache writes are best-effort: a miss next time costs latency, not
-	// correctness, and a degraded cache must never fail the Saga.
+	// correctness, and a degraded cache must never fail the Saga. The cached
+	// copy is stripped of ALL per-submission identity (incl. repo/commit).
 	if verdict.Source == domain.SourcePipeline {
-		cacheable := verdict
-		cacheable.SubmissionID = ""
-		cacheable.OrganizationID = ""
-		_ = uc.cache.Set(ctx, key, cacheable)
+		_ = uc.cache.Set(ctx, key, verdict.StripSource())
 	}
 
 	if err := uc.publisher.Publish(ctx, verdict); err != nil {
@@ -129,14 +125,12 @@ func (uc *ProcessSubmission) analyze(ctx context.Context, sub domain.Submission)
 	}
 
 	return domain.Verdict{
-		SubmissionID:   sub.SubmissionID,
-		OrganizationID: sub.OrganizationID,
 		Decision:       domain.Consolidate(findings),
 		Source:         domain.SourcePipeline,
 		RulesetVersion: uc.opts.RulesetVersion,
 		Findings:       findings,
 		EvaluatedAt:    uc.clock.Now(),
-	}
+	}.StampSource(sub)
 }
 
 // runFallback executes the deterministic fallback with its own fresh deadline
@@ -159,12 +153,10 @@ func (uc *ProcessSubmission) runFallback(ctx context.Context, sub domain.Submiss
 		})
 	}
 	return domain.Verdict{
-		SubmissionID:   sub.SubmissionID,
-		OrganizationID: sub.OrganizationID,
 		Decision:       decision,
 		Source:         domain.SourceFallback,
 		RulesetVersion: uc.opts.RulesetVersion,
 		Findings:       findings,
 		EvaluatedAt:    uc.clock.Now(),
-	}
+	}.StampSource(sub)
 }

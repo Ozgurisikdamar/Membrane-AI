@@ -32,6 +32,20 @@ type Submission struct {
 	Language       string
 	Diff           string
 	Origin         Origin
+	// CommitSHA and PRNumber are optional source coordinates (empty/0 when the
+	// client cannot provide them); set them via WithSource.
+	CommitSHA string
+	PRNumber  int
+}
+
+// WithSource attaches optional source coordinates (used by commit-status and
+// PR-comment reporting). A negative PR number is treated as absent.
+func (s Submission) WithSource(commitSHA string, prNumber int) Submission {
+	s.CommitSHA = strings.TrimSpace(commitSHA)
+	if prNumber > 0 {
+		s.PRNumber = prNumber
+	}
+	return s
 }
 
 const op = "ingestion.domain.NewSubmission"

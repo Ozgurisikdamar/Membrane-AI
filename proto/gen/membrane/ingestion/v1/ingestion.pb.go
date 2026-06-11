@@ -86,8 +86,13 @@ type CodeSubmission struct {
 	FilePath       string `protobuf:"bytes,3,opt,name=file_path,json=filePath,proto3" json:"file_path,omitempty"`
 	Language       string `protobuf:"bytes,4,opt,name=language,proto3" json:"language,omitempty"`
 	// diff is the unified diff of the change under review.
-	Diff          string `protobuf:"bytes,5,opt,name=diff,proto3" json:"diff,omitempty"`
-	Origin        Origin `protobuf:"varint,6,opt,name=origin,proto3,enum=membrane.ingestion.v1.Origin" json:"origin,omitempty"`
+	Diff   string `protobuf:"bytes,5,opt,name=diff,proto3" json:"diff,omitempty"`
+	Origin Origin `protobuf:"varint,6,opt,name=origin,proto3,enum=membrane.ingestion.v1.Origin" json:"origin,omitempty"`
+	// commit_sha optionally identifies the commit under review; required for
+	// commit-status reporting (empty when the client cannot provide it).
+	CommitSha string `protobuf:"bytes,7,opt,name=commit_sha,json=commitSha,proto3" json:"commit_sha,omitempty"`
+	// pr_number optionally identifies the pull/merge request (0 = none).
+	PrNumber      int32 `protobuf:"varint,8,opt,name=pr_number,json=prNumber,proto3" json:"pr_number,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -162,6 +167,20 @@ func (x *CodeSubmission) GetOrigin() Origin {
 		return x.Origin
 	}
 	return Origin_ORIGIN_UNSPECIFIED
+}
+
+func (x *CodeSubmission) GetCommitSha() string {
+	if x != nil {
+		return x.CommitSha
+	}
+	return ""
+}
+
+func (x *CodeSubmission) GetPrNumber() int32 {
+	if x != nil {
+		return x.PrNumber
+	}
+	return 0
 }
 
 type SubmitDiffRequest struct {
@@ -360,7 +379,7 @@ var File_membrane_ingestion_v1_ingestion_proto protoreflect.FileDescriptor
 
 const file_membrane_ingestion_v1_ingestion_proto_rawDesc = "" +
 	"\n" +
-	"%membrane/ingestion/v1/ingestion.proto\x12\x15membrane.ingestion.v1\"\xdd\x01\n" +
+	"%membrane/ingestion/v1/ingestion.proto\x12\x15membrane.ingestion.v1\"\x99\x02\n" +
 	"\x0eCodeSubmission\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1e\n" +
 	"\n" +
@@ -369,7 +388,10 @@ const file_membrane_ingestion_v1_ingestion_proto_rawDesc = "" +
 	"\tfile_path\x18\x03 \x01(\tR\bfilePath\x12\x1a\n" +
 	"\blanguage\x18\x04 \x01(\tR\blanguage\x12\x12\n" +
 	"\x04diff\x18\x05 \x01(\tR\x04diff\x125\n" +
-	"\x06origin\x18\x06 \x01(\x0e2\x1d.membrane.ingestion.v1.OriginR\x06origin\"Z\n" +
+	"\x06origin\x18\x06 \x01(\x0e2\x1d.membrane.ingestion.v1.OriginR\x06origin\x12\x1d\n" +
+	"\n" +
+	"commit_sha\x18\a \x01(\tR\tcommitSha\x12\x1b\n" +
+	"\tpr_number\x18\b \x01(\x05R\bprNumber\"Z\n" +
 	"\x11SubmitDiffRequest\x12E\n" +
 	"\n" +
 	"submission\x18\x01 \x01(\v2%.membrane.ingestion.v1.CodeSubmissionR\n" +

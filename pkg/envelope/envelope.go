@@ -24,6 +24,10 @@ type SubmissionV1 struct {
 	Origin         string    `json:"origin"`
 	Diff           string    `json:"diff"`
 	OccurredAt     time.Time `json:"occurred_at"`
+	// CommitSHA/PRNumber are optional (omitted when unknown); they enable
+	// commit-status and PR-comment reporting downstream.
+	CommitSHA string `json:"commit_sha,omitempty"`
+	PRNumber  int    `json:"pr_number,omitempty"`
 }
 
 // FindingV1 is one analysis finding inside a verdict.
@@ -44,4 +48,9 @@ type VerdictV1 struct {
 	RulesetVersion string      `json:"ruleset_version"`
 	Findings       []FindingV1 `json:"findings"`
 	EvaluatedAt    time.Time   `json:"evaluated_at"`
+	// Repository/CommitSHA/PRNumber echo the submission's optional source
+	// coordinates so reporters can post commit statuses / PR comments.
+	Repository string `json:"repository,omitempty"`
+	CommitSHA  string `json:"commit_sha,omitempty"`
+	PRNumber   int    `json:"pr_number,omitempty"`
 }

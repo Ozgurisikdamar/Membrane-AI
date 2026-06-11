@@ -23,6 +23,19 @@ type Submission struct {
 	Diff           string
 	Origin         string
 	OccurredAt     time.Time
+	// CommitSHA and PRNumber are optional source coordinates, passed through
+	// to the verdict for commit-status/PR reporting.
+	CommitSHA string
+	PRNumber  int
+}
+
+// WithSource attaches optional source coordinates.
+func (s Submission) WithSource(commitSHA string, prNumber int) Submission {
+	s.CommitSHA = strings.TrimSpace(commitSHA)
+	if prNumber > 0 {
+		s.PRNumber = prNumber
+	}
+	return s
 }
 
 const opSubmission = "orchestrator.domain.NewSubmission"
@@ -97,6 +110,36 @@ type Verdict struct {
 	RulesetVersion string
 	Findings       []Finding
 	EvaluatedAt    time.Time
+	// Repository/CommitSHA/PRNumber echo the submission's source coordinates
+	// (reporters post commit statuses with them). NEVER cached: a cached
+	// verdict is reused across submissions whose diffs match, and those may
+	// come from different repositories/commits — the Saga re-stamps them from
+	// the live submission on every path.
+	Repository string
+	CommitSHA  string
+	PRNumber   int
+}
+
+// StampSource sets the per-submission identity and source coordinates on a
+// verdict (used on the cache-hit path and when consolidating).
+func (v Verdict) StampSource(sub Submission) Verdict {
+	v.SubmissionID = sub.SubmissionID
+	v.OrganizationID = sub.OrganizationID
+	v.Repository = sub.Repository
+	v.CommitSHA = sub.CommitSHA
+	v.PRNumber = sub.PRNumber
+	return v
+}
+
+// StripSource clears every per-submission field so the verdict is safe to
+// cache and reuse across submissions with the same diff.
+func (v Verdict) StripSource() Verdict {
+	v.SubmissionID = ""
+	v.OrganizationID = ""
+	v.Repository = ""
+	v.CommitSHA = ""
+	v.PRNumber = 0
+	return v
 }
 
 // Consolidate folds findings into a decision: any blocking finding rejects,

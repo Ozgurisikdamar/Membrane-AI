@@ -44,6 +44,10 @@ func run(log *slog.Logger) error {
 		notifiers = append(notifiers, notify.NewWebhook(cfg.WebhookURL))
 		log.Info("webhook notifier enabled")
 	}
+	if cfg.GitHubToken != "" {
+		notifiers = append(notifiers, notify.NewGitHubStatus(cfg.GitHubAPIURL, cfg.GitHubToken))
+		log.Info("github commit-status notifier enabled")
+	}
 	dispatch := app.NewDispatchVerdict(memorylog.New(), notifiers...)
 
 	consumer, err := kafkabus.NewConsumer(cfg.KafkaBrokers, cfg.VerdictTopic, cfg.ConsumerGroup, dispatch, log)

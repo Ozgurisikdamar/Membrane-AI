@@ -19,10 +19,14 @@ func DecodeSubmission(payload []byte) (domain.Submission, error) {
 	if err := json.Unmarshal(payload, &env); err != nil {
 		return domain.Submission{}, errs.Validation(op, "malformed submission payload", err)
 	}
-	return domain.NewSubmission(
+	sub, err := domain.NewSubmission(
 		env.SubmissionID, env.OrganizationID, env.Repository,
 		env.FilePath, env.Language, env.Diff, env.Origin, env.OccurredAt,
 	)
+	if err != nil {
+		return domain.Submission{}, err
+	}
+	return sub.WithSource(env.CommitSHA, env.PRNumber), nil
 }
 
 // EncodeVerdict renders a domain verdict as a code.verdict.v1 payload.
@@ -41,6 +45,9 @@ func EncodeVerdict(v domain.Verdict) ([]byte, error) {
 		RulesetVersion: v.RulesetVersion,
 		Findings:       findings,
 		EvaluatedAt:    v.EvaluatedAt,
+		Repository:     v.Repository,
+		CommitSHA:      v.CommitSHA,
+		PRNumber:       v.PRNumber,
 	})
 	if err != nil {
 		return nil, errs.Internal(op, "marshal verdict", err)

@@ -35,6 +35,11 @@ type Verdict struct {
 	Source         string
 	RulesetVersion string
 	Findings       []Finding
+	// Repository ("owner/repo"), CommitSHA and PRNumber are optional source
+	// coordinates; commit-status/PR notifiers need them.
+	Repository string
+	CommitSHA  string
+	PRNumber   int
 }
 
 // Report is the rendered notification.
@@ -44,6 +49,9 @@ type Report struct {
 	Outcome        Outcome
 	Title          string
 	Body           string
+	Repository     string
+	CommitSHA      string
+	PRNumber       int
 }
 
 const op = "reporter.domain.NewReport"
@@ -63,6 +71,9 @@ func NewReport(v Verdict) (Report, error) {
 		Outcome:        outcome,
 		Title:          title(outcome, v),
 		Body:           body(v),
+		Repository:     v.Repository,
+		CommitSHA:      v.CommitSHA,
+		PRNumber:       v.PRNumber,
 	}, nil
 }
 

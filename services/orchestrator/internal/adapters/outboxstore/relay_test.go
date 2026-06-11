@@ -55,11 +55,24 @@ func TestRelay_KeepsTickingAfterError(t *testing.T) {
 	shipper := &fakeShipper{err: errors.New("kafka down")}
 	relay := outboxstore.NewRelay(shipper, nil, 10*time.Millisecond, 5, discard())
 
-	ctx, cancel := context.WithTimeout(context.Background(), 150*time.Millisecond)
-	defer cancel()
-	relay.Run(ctx)
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan struct{})
+	go func() { relay.Run(ctx); close(done) }()
 
-	if shipper.calls.Load() < 2 {
-		t.Fatalf("relay must retry after errors; ticks = %d", shipper.calls.Load())
+	// Wait until the relay has demonstrably retried after errors (≥2 ticks),
+	// with a generous deadline so scheduler hiccups cannot flake the test.
+	deadline := time.After(5 * time.Second)
+	for shipper.calls.Load() < 2 {
+		select {
+		case <-deadline:
+			t.Fatalf("relay must retry after errors; ticks = %d", shipper.calls.Load())
+		case <-time.After(5 * time.Millisecond):
+		}
+	}
+	cancel()
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("relay did not stop on cancel")
 	}
 }

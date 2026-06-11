@@ -82,6 +82,9 @@ func (c *Consumer) handleRecord(ctx context.Context, rec *kgo.Record) {
 		Source:         env.Source,
 		RulesetVersion: env.RulesetVersion,
 		Findings:       findings,
+		Repository:     env.Repository,
+		CommitSHA:      env.CommitSHA,
+		PRNumber:       env.PRNumber,
 	}
 	if err := c.disp.Handle(ctx, v); err != nil {
 		if errs.KindOf(err) == errs.KindValidation {

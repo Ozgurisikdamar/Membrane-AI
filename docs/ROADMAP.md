@@ -57,7 +57,10 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done.
 - [~] **Reporter** (`services/reporter`, health :8105) — consumes `code.verdict.v1`; report rendering
       (outcome mapping, finding cap), idempotent fan-out per (submission, notifier); **webhook
       (Slack-compatible) + log notifiers live and E2E-proven** (D-025)
-      - [ ] `commit_sha`/`pr_number` plumbed through the contract → GitHub commit-status/PR-comment adapter
+      - [x] `commit_sha`/`pr_number` plumbed end-to-end (proto → envelope → ingestion → orchestrator →
+            verdict; stripped from cache, re-stamped per submission) → **GitHub commit-status adapter
+            live & E2E-proven** (`membrane-ai/governance` context)
+      - [ ] PR-comment adapter (findings as a review comment)
       - [ ] Redis-backed delivery log for multi-replica
       - [ ] IDE inline-fix channel (with the IDE extension, P3)
 - [ ] Accuracy & evaluation harness (golden datasets, precision/recall, FP-rate SLO)

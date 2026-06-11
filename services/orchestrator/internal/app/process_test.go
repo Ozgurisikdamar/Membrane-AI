@@ -274,6 +274,37 @@ func TestHandle_MaskedDiffFlowsToLaterStages(t *testing.T) {
 	}
 }
 
+func TestHandle_SourceCoordinatesStampedAndNeverCached(t *testing.T) {
+	cache := newFakeCache()
+	pub := &fakePublisher{}
+	uc := newUC(cache, []ports.AnalysisStage{fakeStage{name: "ast"}}, fakeStage{name: "fb"}, pub, app.Options{})
+
+	s := sub(t).WithSource("abc123", 42)
+	v, err := uc.Handle(context.Background(), s)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v.Repository != "repo" || v.CommitSHA != "abc123" || v.PRNumber != 42 {
+		t.Fatalf("verdict missing source coords: %+v", v)
+	}
+	cached := cache.store[domain.CacheKey("some diff", "v1")]
+	if cached.Repository != "" || cached.CommitSHA != "" || cached.PRNumber != 0 {
+		t.Fatalf("cached verdict must not carry source coords (cross-repo reuse!): %+v", cached)
+	}
+
+	// Cache hit from a DIFFERENT repo/commit must be re-stamped with the live
+	// submission's coordinates, never the original ones.
+	other, _ := domain.NewSubmission("sub-2", "org-2", "other-repo", "b.go", "go", "some diff", "ide", now)
+	other = other.WithSource("def456", 7)
+	v2, err := uc.Handle(context.Background(), other)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v2.Source != domain.SourceCache || v2.Repository != "other-repo" || v2.CommitSHA != "def456" || v2.PRNumber != 7 {
+		t.Fatalf("cache-hit verdict not re-stamped: %+v", v2)
+	}
+}
+
 func TestHandle_NoStages_Approves(t *testing.T) {
 	pub := &fakePublisher{}
 	uc := newUC(newFakeCache(), nil, fakeStage{name: "fb"}, pub, app.Options{})

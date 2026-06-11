@@ -2,6 +2,7 @@ package envelope_test
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 	"time"
 
@@ -43,6 +44,25 @@ func TestVerdictV1_GoldenJSON(t *testing.T) {
 		`"evaluated_at":"2026-06-11T12:00:00Z"}`
 	if string(got) != want {
 		t.Fatalf("golden mismatch:\n got %s\nwant %s", got, want)
+	}
+}
+
+func TestOptionalSourceCoordinates_OmittedWhenEmpty(t *testing.T) {
+	// The pre-enrichment golden strings above must stay valid: empty optional
+	// fields may not appear on the wire.
+	b, _ := json.Marshal(envelope.SubmissionV1{SubmissionID: "s"})
+	if string(b) != `{"submission_id":"s","organization_id":"","repository":"","file_path":"",`+
+		`"language":"","origin":"","diff":"","occurred_at":"0001-01-01T00:00:00Z"}` {
+		t.Fatalf("optional fields leaked into the wire: %s", b)
+	}
+	v, _ := json.Marshal(envelope.VerdictV1{
+		SubmissionID: "s", CommitSHA: "abc123", Repository: "owner/repo", PRNumber: 7,
+		Findings: []envelope.FindingV1{},
+	})
+	for _, want := range []string{`"commit_sha":"abc123"`, `"repository":"owner/repo"`, `"pr_number":7`} {
+		if !strings.Contains(string(v), want) {
+			t.Fatalf("missing %s in %s", want, v)
+		}
 	}
 }
 
