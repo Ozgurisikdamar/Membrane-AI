@@ -42,8 +42,10 @@ re-run its install line and re-open the shell.
 | `task proto` | `buf lint` + `buf generate` (regenerate gRPC stubs into `proto/gen`). |
 | `task dev-up` | `docker compose -f deploy/compose/docker-compose.dev.yml up -d` (Redpanda, Redis, pgvector). |
 | `task dev-down` | Tear the dev stack down. |
-| `task run:<svc>` | Run a service locally (e.g. `task run:ingestion`). |
-| `task ci` | What CI runs: proto checks + lint + test + build. Run this before "pushla". |
+| `task run:<svc>` | Run a service locally (e.g. `task run:ingestion`, `task run:semantic`). |
+| `task setup:py` | One-time: create the semantic venv + install dev deps. |
+| `task lint:py` / `task test:py` | ruff + mypy --strict / pytest on the semantic service. |
+| `task ci` | What CI runs: proto + lint + test + build + Python gates. Run this before "pushla". |
 
 > Quality gate before any commit: `task lint && task test` must be green. Before pushing: `task ci`.
 

@@ -44,7 +44,12 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done.
 
 ## P2 — Semantic engine, gateway & agentic governance
 
-- [ ] **Semantic AI service** (Python/FastAPI) — three-tier cost gating, dual-model consensus
+- [~] **Semantic AI service** (Python/FastAPI, `:8005`) — hexagonal scaffold + `/v1/semantic/evaluate`
+      live; **cost-gate skeleton done** (tier-2 heuristic stub + tier-3 behind `PREMIUM_ENABLED` flag,
+      escalation policy in domain, ruff+mypy-strict+pytest green, D-023)
+      - [ ] real tier-2 local model (vLLM) adapter
+      - [ ] real tier-3 premium consensus (Claude Sonnet 4.6 + Gemini) adapter + key handling decision
+      - [ ] orchestrator semantic stage (HTTP client w/ Saga deadline) + resolver RAG context injection
 - [ ] **Point-of-generation prompt/MCP gateway**
 - [ ] **MCP gateway + tool-call governance + package firewall + shadow-AI discovery**
 - [ ] **Reporter** — IDE inline fixes, PR status/comments, Slack/Jira/SIEM, verdict audit

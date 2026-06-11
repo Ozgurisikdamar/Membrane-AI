@@ -23,7 +23,7 @@ pipeline in sub-millisecond time.
 | `services/orchestrator` | Go | Saga state machine: cache → AST → vector → semantic → consensus; 1200 ms IDE deadline + deterministic fallback. |
 | `services/analyzer` | Go | Deterministic static analysis (gRPC `membrane.analyzer.v1`): secret detection + masking, risky-pattern rules; AST detectors land with resolver-provided full files (D-019). |
 | `services/resolver` | Go | Repo metadata + gold-codebase vector queries (pgvector HNSW). |
-| `services/semantic` | Python/FastAPI | Dual-model consensus (local vLLM + cloud), consensus resolution. |
+| `services/semantic` | Python/FastAPI | `POST /v1/semantic/evaluate` (HTTP+JSON, D-023): tier-2 local model + tier-3 premium consensus behind the cost gate (D-008); receives masked diffs + resolver gold context. |
 | `services/reporter` | Go | Verdicts → IDE inline fixes, PR status/comments, Slack/Jira/SIEM; writes audit. |
 | `pkg/*` | Go | Shared foundation: `config`, `logging`, `errs`, `health`, `kafka`. |
 
@@ -88,7 +88,9 @@ nothing from `app`/`adapters`; `app` depends only on `ports` (interfaces), never
 - **Kafka topics:** `<domain>.<event>.v<major>` (e.g. `code.submission.v1`).
 - **Go module paths:** `github.com/Ozgurisikdamar/Membrane-AI/<path>` (e.g. `.../services/ingestion`, `.../pkg`).
 - **Service ports (local dev):** gRPC `:90xx`, HTTP `:80xx`, health `:81xx` — ingestion = gRPC `:9001`,
-  HTTP `:8001`, health `:8101`. Increment per service.
+  HTTP `:8001`, health `:8101`; orchestrator health `:8102`; analyzer gRPC `:9003`/health `:8103`;
+  resolver gRPC `:9004`/health `:8104`. The Python semantic service serves HTTP **and** health on one
+  port `:8005` (D-023).
 - **Config:** 12-factor, env vars prefixed `MEMBRANE_<SVC>_…`, validated at startup (fail fast).
 - **Errors:** typed domain errors in `pkg/errs`; wrap with `%w`; map to gRPC/HTTP codes at the adapter edge.
 - **Observability:** structured slog JSON with a propagated `trace_id`; OpenTelemetry spans across hops.

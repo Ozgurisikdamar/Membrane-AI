@@ -6,6 +6,8 @@ version: "3"
 
 vars:
   GO_MODULES: pkg proto services/analyzer services/ingestion services/orchestrator services/resolver
+  # Path to the semantic service's venv interpreter (created by task setup:py).
+  SEMANTIC_PY: '{{if eq OS "windows"}}.venv/Scripts/python.exe{{else}}.venv/bin/python{{end}}'
 
 tasks:
   default:
@@ -46,12 +48,50 @@ tasks:
       - for: { var: GO_MODULES }
         cmd: cd {{.ITEM}} && GOWORK=off go mod tidy
 
+  setup:py:
+    desc: Create the semantic service venv and install dev dependencies
+    dir: services/semantic
+    cmds:
+      - python -m venv .venv
+      - '{{.SEMANTIC_PY}} -m pip install --quiet --upgrade pip'
+      - '{{.SEMANTIC_PY}} -m pip install --quiet -e ".[dev]"'
+
+  lint:py:
+    desc: ruff + mypy --strict on the semantic service (needs task setup:py once)
+    dir: services/semantic
+    preconditions:
+      - sh: test -f {{.SEMANTIC_PY}}
+        msg: "semantic venv missing — run: task setup:py"
+    cmds:
+      - '{{.SEMANTIC_PY}} -m ruff check .'
+      - '{{.SEMANTIC_PY}} -m ruff format --check .'
+      - '{{.SEMANTIC_PY}} -m mypy semantic'
+
+  test:py:
+    desc: pytest on the semantic service
+    dir: services/semantic
+    preconditions:
+      - sh: test -f {{.SEMANTIC_PY}}
+        msg: "semantic venv missing — run: task setup:py"
+    cmds:
+      - '{{.SEMANTIC_PY}} -m pytest'
+
+  run:semantic:
+    desc: Run the semantic service (HTTP :8005, health on the same port)
+    dir: services/semantic
+    env:
+      MEMBRANE_SEMANTIC_PORT: "8005"
+    cmds:
+      - '{{.SEMANTIC_PY}} -m semantic.main'
+
   ci:
     desc: Full local CI gate (run before "pushla")
     cmds:
       - task: lint
       - task: test
       - task: build
+      - task: lint:py
+      - task: test:py
 
   migrate:
     desc: Apply SQL migrations (up) to the dev Postgres via docker compose

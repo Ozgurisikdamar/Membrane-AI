@@ -3,52 +3,55 @@
 > **On "devam et": read this file, then do "Next up". Update this file before the session ends.**
 > Keep it short and current — this is state, not history.
 
-_Last updated: 2026-06-11 — session: P1 part 4 (outbox + shared envelope). **P1 COMPLETE.**_
+_Last updated: 2026-06-11 — session: P2 part 1 (semantic service scaffold)._
+
+## ⚠️ Push is blocked on a token scope
+
+`git push` was rejected: the classic PAT lacks the **`workflow`** scope (required because commits touch
+`.github/workflows/ci.yml`). The user must edit the token at https://github.com/settings/tokens →
+add **workflow** → Update. Then `git -C C:\Dev\Membrane-AI push origin main` ships everything
+(**8 local commits pending**). After the first successful push, check the Actions run
+(`gh run list/watch`) — CI has never executed remotely.
 
 ## Current state
 
-**P0 ✓, P1 ✓** (orchestrator, analyzer, resolver, outbox, E2E). `task ci` green across **6 modules**.
+**P0 ✓, P1 ✓, P2 started.** `task ci` green: 6 Go modules + Python gates (ruff, mypy --strict, pytest 16).
 
-- **`pkg/envelope`**: single wire contract for `code.submission.v1` / `code.verdict.v1` (golden-JSON
-  tested). Ingestion + orchestrator adapters refactored onto it; orchestrator mapping lives in
-  `internal/adapters/codec` (used by consumer, direct publisher AND outbox sink — encoded once).
-- **Transactional outbox live (D-013/D-021)**: `outboxstore.Store` implements the Saga's
-  `VerdictPublisher` port → `verdict_audit` + `outbox` written in ONE ACID tx; in-process `Relay`
-  (500ms/100 rows, `FOR UPDATE SKIP LOCKED`, at-least-once) ships rows via
-  `kafkabus.Publisher.PublishRecord`. Failed publish ⇒ rollback ⇒ retry next tick.
-  **Proven**: live-DB integration test (`MEMBRANE_ORCHESTRATOR_TEST_DSN`) + full E2E — verdict reached
-  Kafka via the relay, audit row written, outbox `published=true`; orchestrator readyz now checks
-  kafka+redis+postgres.
-- Schema: `verdict_audit.org_id` now VARCHAR (no FK, D-022); 0001 evolves in place pre-1.0 — dev DB was
-  recreated this session (`down -v` + `task migrate`).
-- **Commits local on `main`, NOT pushed** (push only on "pushla"). Dev stack left running.
+- **`services/semantic`** (Python 3.11 local / 3.12 CI, FastAPI, hexagonal, D-023):
+  - domain: `EvaluationInput` (masked diff + gold context), `LocalAssessment` (findings + risk score),
+    `should_escalate` gate policy (blocking finding OR score ≥ threshold).
+  - app `EvaluateDiff`: tier-2 always; tier-3 only if escalate AND `MEMBRANE_SEMANTIC_PREMIUM_ENABLED`
+    (default off). Premium augments — never replaces — local findings.
+  - adapters: `HeuristicLocalModel` (deterministic stub until vLLM lands — explicitly labeled),
+    `DisabledPremiumConsensus` (flag-on without real adapter ⇒ loud 503), FastAPI HTTP on `:8005`
+    (`/v1/semantic/evaluate`, `/livez`, `/readyz`).
+  - Real-process smoke: readyz ✓, live evaluate ✓ (3 heuristic findings, tier=local).
+  - Tooling: `task setup:py | lint:py | test:py | run:semantic`; `task ci` includes Python; CI workflow
+    gained a `python` job (ubuntu, 3.12).
 
-## Next up  (P2 begins; see docs/ROADMAP.md)
+## Next up  (P2 continuation; see docs/ROADMAP.md)
 
-1. **Semantic service scaffold** (`services/semantic`, Python 3.12 / FastAPI) per
-   ENGINEERING-STANDARDS §8: hexagonal split (domain/app/ports/adapters), `ruff` + `mypy --strict`,
-   pydantic v2, pytest ≥80% domain/app. First slice:
-   - `POST /v1/semantic/evaluate` — accepts (masked diff + gold context), returns findings.
-   - **Three-tier cost gate skeleton**: Tier-2 local-model port (stub adapter now), Tier-3 premium
-     consensus port behind a feature flag (no real API calls yet — record key handling in DECISIONS
-     when added). Decide HTTP+pydantic vs proto contract and record as D-023.
-   - Add a `task` target (`run:semantic`, `lint:py`, `test:py`) + CI job (ruff/mypy/pytest).
-2. **Orchestrator semantic stage**: new `AnalysisStage` adapter calling the semantic service with the
-   Saga deadline + the resolver's gold context (RAG injection — resolver client port into orchestrator
-   or semantic service calls resolver itself: decide & record).
-3. Then: reporter service (verdict consumer → PR status/comments) per ARCHITECTURE §2.
+1. **Orchestrator semantic stage**: new `AnalysisStage` adapter (`internal/adapters/semanticstage`)
+   calling `POST /v1/semantic/evaluate` over HTTP with the Saga's ctx deadline; needs the masked diff —
+   today the orchestrator passes the RAW diff between stages; decide: analyzer response's `masked_diff`
+   must flow to the semantic stage (extend `AnalysisStage` contract or chain stage outputs — design it,
+   record as D-024). Config: `MEMBRANE_ORCHESTRATOR_SEMANTIC_URL` (empty = stage off). Wire + E2E.
+2. **Resolver RAG injection**: orchestrator (or the semantic stage adapter) calls resolver
+   `ResolveContext` and forwards `gold_context` into the evaluate request. Stub embedder caveat: org
+   must be a UUID for resolver — E2E demo org should switch to a UUID.
+3. Then: real tier-2 vLLM adapter, or reporter service — whichever the user prioritizes.
 
 ## Blockers / gotchas
 
-- **Stray `GOWORK`** env → ALWAYS `task …` or `GOWORK=off`. **buf** = prebuilt exe. **`-race`** = CI-only.
-- Dev DB was recreated; if old containers/volumes linger: `task dev-up` + `task migrate` re-seed schema.
+- **Push**: see the banner above (workflow scope).
+- **Stray `GOWORK`** → ALWAYS `task …` or `GOWORK=off`. **buf** = prebuilt exe. **`-race`** = CI-only.
+- Python venv lives at `services/semantic/.venv` (gitignored); recreate with `task setup:py`.
 - Integration tests: `MEMBRANE_ORCHESTRATOR_TEST_DSN` / `MEMBRANE_RESOLVER_TEST_DSN` =
-  `postgres://membrane:membrane@localhost:5432/membrane`.
-- **gh**: classic-PAT auth; push/board ops gated — push only on "pushla".
+  `postgres://membrane:membrane@localhost:5432/membrane` (needs `task dev-up` + `task migrate`).
 
 ## How to verify
 
-- `task ci` → all green (6 modules).
-- Outbox: orchestrator integration test above; E2E (HANDOVER recipe of P1 part 3) now also leaves a
-  `verdict_audit` row + `outbox.published_at` set — check with
-  `docker compose -f deploy/compose/docker-compose.dev.yml exec -T postgres psql -U membrane -d membrane -c "TABLE verdict_audit;"`.
+- `task ci` → all green (Go + Python).
+- Semantic: `task run:semantic` → `GET :8005/readyz`; POST a masked diff with "auth"/"crypto" markers
+  to `/v1/semantic/evaluate` → tier=local findings; with `MEMBRANE_SEMANTIC_PREMIUM_ENABLED=1` the same
+  call returns 503 (disabled premium refuses loudly — correct until a real adapter exists).

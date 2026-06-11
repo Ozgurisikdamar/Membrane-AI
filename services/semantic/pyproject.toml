@@ -1,0 +1,58 @@
+[project]
+name = "membrane-semantic"
+version = "0.1.0"
+description = "MEMBRANE.AI semantic evaluation service: three-tier cost-gated LLM analysis."
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi>=0.115",
+  "pydantic>=2.7",
+  "uvicorn>=0.30",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8",
+  "httpx>=0.27",
+  "ruff>=0.6",
+  "mypy>=1.11",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["semantic*"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = [
+  "E", "F", "W",      # pycodestyle / pyflakes
+  "I",                # isort
+  "N",                # pep8-naming
+  "UP",               # pyupgrade
+  "B",                # bugbear
+  "SIM",              # simplify
+  "RUF",
+  "ANN",              # type annotations required
+  "S",                # bandit security
+]
+ignore = [
+  "ANN401",           # Any in **kwargs of adapters
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S101", "ANN"]  # asserts and terse annotations are fine in tests
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_unreachable = true
+show_error_codes = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
