@@ -12,6 +12,7 @@ import (
 
 	"github.com/Ozgurisikdamar/Membrane-AI/pkg/envelope"
 	"github.com/Ozgurisikdamar/Membrane-AI/pkg/errs"
+	"github.com/Ozgurisikdamar/Membrane-AI/pkg/logging"
 	"github.com/Ozgurisikdamar/Membrane-AI/pkg/observability"
 	"github.com/Ozgurisikdamar/Membrane-AI/services/reporter/internal/domain"
 )
@@ -75,10 +76,13 @@ func (c *Consumer) handleRecord(ctx context.Context, rec *kgo.Record) {
 	}
 	ctx, end := observability.Start(ctx, "reporter", "reporter.report")
 	defer end()
+	// Bridge the span's trace ID into the logger so logs correlate with traces.
+	ctx = logging.WithTraceID(ctx, observability.TraceID(ctx))
+	log := logging.FromContext(ctx, c.log)
 
 	var env envelope.VerdictV1
 	if err := json.Unmarshal(rec.Value, &env); err != nil {
-		c.log.Error("skipping malformed verdict record", "offset", rec.Offset, "err", err)
+		log.Error("skipping malformed verdict record", "offset", rec.Offset, "err", err)
 		return
 	}
 	findings := make([]domain.Finding, 0, len(env.Findings))
@@ -100,14 +104,14 @@ func (c *Consumer) handleRecord(ctx context.Context, rec *kgo.Record) {
 	}
 	if err := c.disp.Handle(ctx, v); err != nil {
 		if errs.KindOf(err) == errs.KindValidation {
-			c.log.Error("skipping invalid verdict", "submission_id", env.SubmissionID, "err", err)
+			log.Error("skipping invalid verdict", "submission_id", env.SubmissionID, "err", err)
 			return
 		}
-		c.log.Error("dispatch failed; record will be redelivered",
+		log.Error("dispatch failed; record will be redelivered",
 			"submission_id", env.SubmissionID, "err", err)
 		return
 	}
-	c.log.Info("verdict reported", "submission_id", env.SubmissionID, "decision", env.Decision)
+	log.Info("verdict reported", "submission_id", env.SubmissionID, "decision", env.Decision)
 }
 
 // Ping checks broker connectivity for readiness probes.

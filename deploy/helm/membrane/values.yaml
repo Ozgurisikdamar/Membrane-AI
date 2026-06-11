@@ -24,7 +24,7 @@ infra:
   # OTLP/gRPC collector address for distributed tracing (D-032). Empty disables
   # tracing fleet-wide; otlpInsecure uses plaintext gRPC for in-cluster collectors.
   otlpEndpoint: ""
-  otlpInsecure: true
+  otlpInsecure: false # secure (TLS) by default; set true only for a plaintext in-cluster collector
   # Tier-2 vLLM endpoint (OpenAI-compatible). Empty = heuristic-only (D-028).
   vllmUrl: ""
   vllmModel: "deepseek-coder"
@@ -166,6 +166,8 @@ services:
     env:
       MEMBRANE_REPORTER_KAFKA_BROKERS: "{{ .Values.infra.kafkaBrokers }}"
       MEMBRANE_REPORTER_GITHUB_API_URL: "{{ .Values.infra.githubApiUrl }}"
+      MEMBRANE_REPORTER_OTLP_ENDPOINT: "{{ .Values.infra.otlpEndpoint }}"
+      MEMBRANE_REPORTER_OTLP_INSECURE: "{{ .Values.infra.otlpInsecure }}"
     secretEnv:
       MEMBRANE_REPORTER_GITHUB_TOKEN: githubToken
       MEMBRANE_REPORTER_WEBHOOK_URL: webhookUrl

@@ -11,6 +11,7 @@ import (
 	"github.com/twmb/franz-go/pkg/kgo"
 
 	"github.com/Ozgurisikdamar/Membrane-AI/pkg/errs"
+	"github.com/Ozgurisikdamar/Membrane-AI/pkg/logging"
 	"github.com/Ozgurisikdamar/Membrane-AI/pkg/observability"
 	"github.com/Ozgurisikdamar/Membrane-AI/services/orchestrator/internal/adapters/codec"
 	"github.com/Ozgurisikdamar/Membrane-AI/services/orchestrator/internal/domain"
@@ -77,19 +78,22 @@ func (c *Consumer) handleRecord(ctx context.Context, rec *kgo.Record) {
 	}
 	ctx, end := observability.Start(ctx, "orchestrator", "orchestrator.process")
 	defer end()
+	// Bridge the span's trace ID into the logger so logs correlate with traces.
+	ctx = logging.WithTraceID(ctx, observability.TraceID(ctx))
+	log := logging.FromContext(ctx, c.log)
 
 	sub, err := codec.DecodeSubmission(rec.Value)
 	if err != nil {
 		// Poison messages must not wedge the partition: log and skip.
-		c.log.Error("skipping invalid submission record", "offset", rec.Offset, "err", err)
+		log.Error("skipping invalid submission record", "offset", rec.Offset, "err", err)
 		return
 	}
 	verdict, err := c.proc.Handle(ctx, sub)
 	if err != nil {
-		c.log.Error("saga failed; record will be redelivered", "submission_id", sub.SubmissionID, "err", err)
+		log.Error("saga failed; record will be redelivered", "submission_id", sub.SubmissionID, "err", err)
 		return
 	}
-	c.log.Info("verdict published",
+	log.Info("verdict published",
 		"submission_id", verdict.SubmissionID,
 		"decision", string(verdict.Decision),
 		"source", string(verdict.Source),

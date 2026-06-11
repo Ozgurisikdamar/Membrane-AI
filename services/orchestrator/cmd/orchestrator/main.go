@@ -57,7 +57,7 @@ func run(log *slog.Logger) error {
 		OTLPEndpoint: cfg.OTLPEndpoint, Insecure: cfg.OTLPInsecure,
 	})
 	if err != nil {
-		return err
+		log.Warn("tracing setup failed; continuing without tracing", "err", err)
 	}
 	defer observability.Stop(otelShutdown)
 

@@ -65,7 +65,7 @@ func Load() (Config, error) {
 		UseInMemory:      l.Bool("USE_IN_MEMORY", false),
 		ShutdownTimeout:  l.Duration("SHUTDOWN_TIMEOUT", 15*time.Second),
 		OTLPEndpoint:     l.String("OTLP_ENDPOINT", ""),
-		OTLPInsecure:     l.Bool("OTLP_INSECURE", true),
+		OTLPInsecure:     l.Bool("OTLP_INSECURE", false), // secure by default; dev opts in
 	}
 	return c, l.Err()
 }

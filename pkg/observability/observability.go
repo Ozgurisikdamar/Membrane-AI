@@ -37,8 +37,13 @@ type Config struct {
 type Shutdown func(context.Context) error
 
 // Setup installs the W3C propagator and, when an endpoint is configured, an OTLP
-// trace exporter + SDK TracerProvider. The returned Shutdown is always non-nil.
+// trace exporter + SDK TracerProvider. The returned Shutdown is ALWAYS non-nil —
+// even on error — so callers can safely `defer Stop(shutdown)` and treat a tracing
+// setup failure as non-fatal (tracing is a non-critical subsystem; a misconfigured
+// collector must never crash the data plane).
 func Setup(ctx context.Context, cfg Config) (Shutdown, error) {
+	noop := func(context.Context) error { return nil }
+
 	// Always propagate W3C trace context + baggage, even with tracing off, so a
 	// later-enabled service still sees inbound context.
 	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(
@@ -47,16 +52,18 @@ func Setup(ctx context.Context, cfg Config) (Shutdown, error) {
 	))
 
 	if cfg.OTLPEndpoint == "" {
-		return func(context.Context) error { return nil }, nil
+		return noop, nil
 	}
 
-	res, err := resource.New(ctx, resource.WithAttributes(
-		// Literal semconv keys (avoids pinning a semconv module version).
+	// Merge with resource.Default() so spans carry the standard telemetry.sdk.*
+	// identity attributes alongside our service.name/version.
+	res, err := resource.Merge(resource.Default(), resource.NewWithAttributes(
+		"", // no schema URL → never conflicts with Default()'s schema
 		attribute.String("service.name", cfg.ServiceName),
 		attribute.String("service.version", cfg.ServiceVersion),
 	))
 	if err != nil {
-		return nil, err
+		return noop, err
 	}
 
 	opts := []otlptracegrpc.Option{otlptracegrpc.WithEndpoint(cfg.OTLPEndpoint)}
@@ -65,7 +72,7 @@ func Setup(ctx context.Context, cfg Config) (Shutdown, error) {
 	}
 	exporter, err := otlptracegrpc.New(ctx, opts...)
 	if err != nil {
-		return nil, err
+		return noop, err
 	}
 
 	tp := sdktrace.NewTracerProvider(

@@ -31,7 +31,7 @@ func Load() (Config, error) {
 		EmbedDim:        l.Int("EMBED_DIM", 3072), // must match gold_codebase_index.embedding
 		ShutdownTimeout: l.Duration("SHUTDOWN_TIMEOUT", 15*time.Second),
 		OTLPEndpoint:    l.String("OTLP_ENDPOINT", ""),
-		OTLPInsecure:    l.Bool("OTLP_INSECURE", true),
+		OTLPInsecure:    l.Bool("OTLP_INSECURE", false), // secure by default; dev opts in
 	}
 	return c, l.Err()
 }
