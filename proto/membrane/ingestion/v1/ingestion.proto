@@ -1,0 +1,58 @@
+syntax = "proto3";
+
+// Package membrane.ingestion.v1 is the contract for the ingestion service:
+// the entry point that accepts code submissions from IDEs/agents (gRPC) and
+// source-control webhooks (HTTP, see the service docs) and emits them onto the
+// event bus for the analysis pipeline.
+package membrane.ingestion.v1;
+
+option go_package = "github.com/Ozgurisikdamar/Membrane-AI/proto/gen/membrane/ingestion/v1;ingestionv1";
+
+// Origin records where a submission entered the system.
+enum Origin {
+  ORIGIN_UNSPECIFIED = 0;
+  ORIGIN_IDE = 1;
+  ORIGIN_WEBHOOK = 2;
+}
+
+// CodeSubmission is a single change to be governed by MEMBRANE.AI.
+message CodeSubmission {
+  // organization_id is the tenant UUID; also the Kafka partition key, so a
+  // tenant's submissions are strictly ordered and isolated.
+  string organization_id = 1;
+  string repository = 2;
+  string file_path = 3;
+  string language = 4;
+  // diff is the unified diff of the change under review.
+  string diff = 5;
+  Origin origin = 6;
+}
+
+message SubmitDiffRequest {
+  CodeSubmission submission = 1;
+}
+
+message SubmitDiffResponse {
+  string submission_id = 1;
+  string status = 2;
+}
+
+message StreamCodeDiffRequest {
+  CodeSubmission submission = 1;
+}
+
+message StreamCodeDiffResponse {
+  string submission_id = 1;
+  string status = 2;
+}
+
+// IngestionService accepts code submissions and queues them for analysis.
+service IngestionService {
+  // SubmitDiff is a one-shot submission (used by webhook bridges and simple
+  // clients).
+  rpc SubmitDiff(SubmitDiffRequest) returns (SubmitDiffResponse);
+
+  // StreamCodeDiff is a duplex stream for IDE/agent integrations: the client
+  // streams diffs and receives an acknowledgement per submission.
+  rpc StreamCodeDiff(stream StreamCodeDiffRequest) returns (stream StreamCodeDiffResponse);
+}

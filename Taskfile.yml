@@ -1,0 +1,74 @@
+version: "3"
+
+# Every Go command sets GOWORK=off inline so the stray machine-level GOWORK
+# never hijacks resolution (in-repo `replace` directives wire the modules
+# together; see docs/HANDOVER.md). CGO is off for portable local builds.
+
+vars:
+  GO_MODULES: pkg proto services/ingestion
+
+tasks:
+  default:
+    desc: List available tasks
+    cmds:
+      - task --list
+    silent: true
+
+  proto:
+    desc: Lint and (re)generate protobuf stubs
+    dir: proto
+    cmds:
+      - buf lint
+      - buf generate
+
+  lint:
+    desc: buf lint + golangci-lint across all Go modules
+    cmds:
+      - cd proto && buf lint
+      - for: { var: GO_MODULES }
+        cmd: cd {{.ITEM}} && GOWORK=off golangci-lint run ./...
+
+  test:
+    desc: Run tests with coverage across all Go modules
+    cmds:
+      - for: { var: GO_MODULES }
+        cmd: cd {{.ITEM}} && GOWORK=off CGO_ENABLED=0 go test -cover ./...
+
+  build:
+    desc: Build all Go modules
+    cmds:
+      - for: { var: GO_MODULES }
+        cmd: cd {{.ITEM}} && GOWORK=off CGO_ENABLED=0 go build ./...
+
+  tidy:
+    desc: go mod tidy across all Go modules
+    cmds:
+      - for: { var: GO_MODULES }
+        cmd: cd {{.ITEM}} && GOWORK=off go mod tidy
+
+  ci:
+    desc: Full local CI gate (run before "pushla")
+    cmds:
+      - task: lint
+      - task: test
+      - task: build
+
+  dev-up:
+    desc: Start the local dev stack (Redpanda, Redis, pgvector)
+    cmds:
+      - docker compose -f deploy/compose/docker-compose.dev.yml up -d
+
+  dev-down:
+    desc: Stop and remove the local dev stack
+    cmds:
+      - docker compose -f deploy/compose/docker-compose.dev.yml down -v
+
+  run:ingestion:
+    desc: Run the ingestion service locally in in-memory mode (no Kafka needed)
+    dir: services/ingestion
+    env:
+      GOWORK: "off"
+      MEMBRANE_INGESTION_USE_IN_MEMORY: "true"
+      MEMBRANE_INGESTION_LOG_LEVEL: "debug"
+    cmds:
+      - go run ./cmd/ingestion

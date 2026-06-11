@@ -1,0 +1,50 @@
+version: "2"
+
+run:
+  timeout: 5m
+
+linters:
+  default: standard # govet, errcheck, staticcheck, ineffassign, unused
+  enable:
+    - revive
+    - gocritic
+    - gosec
+    - bodyclose
+    - errorlint
+    - contextcheck
+    - unconvert
+    - misspell
+    - depguard
+  settings:
+    depguard:
+      rules:
+        # Enforce the hexagonal dependency rule: the pure domain must not import
+        # the application or adapter layers.
+        domain-isolation:
+          files:
+            - "**/internal/domain/**"
+          deny:
+            - pkg: github.com/Ozgurisikdamar/Membrane-AI/services/ingestion/internal/adapters
+              desc: "hexagonal: domain must not import adapters"
+            - pkg: github.com/Ozgurisikdamar/Membrane-AI/services/ingestion/internal/app
+              desc: "hexagonal: domain must not import app"
+  exclusions:
+    rules:
+      # Tests may ignore some return values and are not security-sensitive.
+      - path: _test\.go
+        linters:
+          - gosec
+          - errcheck
+      # Generated protobuf code is not ours to lint.
+      - path: proto/gen/
+        linters:
+          - revive
+          - gocritic
+          - gosec
+          - errcheck
+          - staticcheck
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
