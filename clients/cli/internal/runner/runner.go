@@ -80,8 +80,16 @@ func Run(ctx context.Context, opts Options) (Result, error) {
 	res := Result{Root: root}
 	detectors := scan.Default()
 
+	// relBase anchors finding paths; for a single-file root it is the file's
+	// directory (rel against the file itself would label every finding ".").
+	relBase := root
+	if !info.IsDir() {
+		relBase = filepath.Dir(root)
+		res.Root = relBase
+	}
+
 	scanOne := func(path string) error {
-		rel, rerr := filepath.Rel(root, path)
+		rel, rerr := filepath.Rel(relBase, path)
 		if rerr != nil {
 			rel = path
 		}
@@ -115,7 +123,6 @@ func Run(ctx context.Context, opts Options) (Result, error) {
 		if err := scanOne(root); err != nil {
 			return Result{}, err
 		}
-		res.Root = filepath.Dir(root)
 	} else {
 		err = filepath.WalkDir(root, func(path string, d fs.DirEntry, walkErr error) error {
 			if walkErr != nil {

@@ -44,6 +44,7 @@ re-run its install line and re-open the shell.
 | `task dev-down` | Tear the dev stack down. |
 | `task run:<svc>` | Run a service locally (e.g. `task run:ingestion`, `task run:semantic`). |
 | `task build:cli` | Build the static Code Sweeper binary into `bin/membrane(.exe)`. |
+| `membrane scan [path]` | Offline scan. `--json` machine output; `--report md\|html [--out file]` = Generative-AI Technical-Debt Report (rule/dir/file aggregates + A–F grade); `--fail-on=blocking\|warning\|never` drives the exit code. |
 | `task build:images` | Build all 6 container images `membrane/<svc>:dev` (distroless Go + python-slim semantic). |
 | `task full-up` / `task full-down` | All-container profile: infra + every service from local images (`docker-compose.full.yml`). |
 | `task setup:py` | One-time: create the semantic venv + install dev deps. |

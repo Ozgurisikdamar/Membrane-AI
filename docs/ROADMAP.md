@@ -73,7 +73,10 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done.
 - [~] **CLI "Code Sweeper"** (`clients/cli`, static binary `membrane`) — `membrane scan [path]` offline
       scan via `pkg/scan` (detectors unified across analyzer/orchestrator/CLI, D-027); human + `--json`
       output; CI exit codes (`--fail-on`)
-      - [ ] "Generative-AI Technical-Debt Report" output mode (the GTM lead magnet)
+      - [x] **"Generative-AI Technical-Debt Report" output mode** (the GTM lead magnet):
+            `--report md|html [--out file]` — per-rule/per-directory/top-file aggregates plus a
+            transparent severity-weighted debt score and A–F grade; HTML is a single self-contained
+            light-toned page (`internal/report`)
       - [ ] packaging matrix: winget/brew/deb/rpm/tarball (P3 release work)
 - [ ] **IDE extension** (VS Code / Cursor)
 - [ ] **SCM integration** (GitHub/GitLab) end-to-end

@@ -79,6 +79,14 @@ func TestRun_SingleFileTarget(t *testing.T) {
 	if len(res.Findings) != 1 || res.Findings[0].Rule != "generic-assigned-secret" {
 		t.Fatalf("findings = %+v", res.Findings)
 	}
+	// rel is computed against the file's directory — the finding must carry
+	// the file name, not "." (which used to label every single-file finding).
+	if res.Findings[0].File != "creds.env" {
+		t.Fatalf("file = %q, want creds.env", res.Findings[0].File)
+	}
+	if res.Root != root {
+		t.Fatalf("root = %q, want the file's directory %q", res.Root, root)
+	}
 }
 
 func TestRun_MissingRootErrors(t *testing.T) {

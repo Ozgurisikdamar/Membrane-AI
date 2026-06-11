@@ -3,7 +3,7 @@
 > **On "devam et": read this file, then do "Next up". Update this file before the session ends.**
 > Keep it short and current — this is state, not history.
 
-_Last updated: 2026-06-11 — session: P3 part 3 (containerization, D-029)._
+_Last updated: 2026-06-11 — session: P3 part 4 (Code Sweeper Technical-Debt Report mode)._
 
 ## Push policy
 
@@ -20,7 +20,21 @@ The user pushes manually (`git push` in their own terminal). Check pending:
 
 ## Current state
 
-**P0 ✓ P1 ✓ P2 ✓ — P3 in flight.** `task ci` green: 8 Go modules + Python (23 pytest).
+**P0 ✓ P1 ✓ P2 ✓ — P3 in flight.** `task ci` green: 8 Go modules + Python (24 pytest).
+
+- **Technical-Debt Report mode done** (the GTM lead magnet): `membrane scan --report md|html
+  [--out file]` → `clients/cli/internal/report`. Aggregates by rule/dir/file, severity-weighted
+  debt score + A–F grade (constants render via a single `ScoringLegend` so prose can't drift;
+  small scans grade against a 10-file floor; zero-scanned = "—", never "Clean ✓"). Detail section
+  is severity-first before its 200-row cap (blockers are never the truncated rows). HTML is one
+  self-contained light-toned page. Exit codes unchanged (`--fail-on` still decides).
+- **Hardening from the multi-agent review of that change**: extra positional args now exit 2
+  (previously silently dropped the path AND following flags — CI false-clean); single-file scans
+  label findings with the file name (was "."); mdEscape neutralizes control chars (CR/ESC) and
+  doubles backslashes before pipe-escaping; terminal output sanitizes ANSI/OSC; report renders to
+  memory first (no truncated file on render error, close checked before the success line);
+  report totals tallied from findings (single source of truth); unknown severities weigh as
+  warnings, never info.
 
 - **Containerization done (D-029)**: one parameterized `deploy/docker/Dockerfile.go` (multi-stage,
   BuildKit cache mounts, static binary → `distroless/static:nonroot`) builds all 5 Go services;
@@ -39,16 +53,19 @@ The user pushes manually (`git push` in their own terminal). Check pending:
 
 ## Next up  (P3 continuation; see docs/ROADMAP.md)
 
-1. **Code Sweeper "Technical-Debt Report" mode** (`membrane scan --report md|html`): aggregate
-   findings by rule/severity/dir + summary stats — the GTM lead magnet (report §GTM).
-2. **Helm chart** (deploy/helm): now unblocked by D-029 images; values per service, infra as
+1. **Helm chart** (deploy/helm): unblocked by D-029 images; values per service, infra as
    dependencies or external endpoints.
-3. **Premium tier-3 consensus adapter** (Claude Sonnet 4.6 + Gemini): needs an API-key handling
+2. **Premium tier-3 consensus adapter** (Claude Sonnet 4.6 + Gemini): needs an API-key handling
    decision (env vs file vs vault) — record as **D-030** when built; until then the flag stays off.
+3. **CLI packaging matrix** (winget/brew/deb/rpm/tarball) or **accuracy/eval harness** — pick per
+   GTM priority.
 
 ## How to verify
 
 - `task ci` → all green.
+- Report mode: `task build:cli` then `bin/membrane scan . --report html --out debt.html
+  --fail-on=never` (repo self-scan ≈ 34 findings, all from test fixtures — a good demo). Story
+  lives in `clients/cli/internal/report/report_test.go` + `cmd/membrane/main_test.go`.
 - Containers: `task build:images` then `task full-up`; from the host probe
   `curl http://localhost:8101/readyz` (ingestion), `:8102`–`:8105` (orchestrator/analyzer/resolver/
   reporter), `http://localhost:8005/readyz` (semantic). Kafka from the host = `localhost:19092`.
