@@ -3,55 +3,60 @@
 > **On "devam et": read this file, then do "Next up". Update this file before the session ends.**
 > Keep it short and current — this is state, not history.
 
-_Last updated: 2026-06-11 — session: P2 part 1 (semantic service scaffold)._
+_Last updated: 2026-06-11 — session: P2 part 2 (semantic stage + RAG in the Saga, D-024)._
 
-## ⚠️ Push is blocked on a token scope
+## ⚠️ Push is STILL blocked on a token scope
 
-`git push` was rejected: the classic PAT lacks the **`workflow`** scope (required because commits touch
-`.github/workflows/ci.yml`). The user must edit the token at https://github.com/settings/tokens →
-add **workflow** → Update. Then `git -C C:\Dev\Membrane-AI push origin main` ships everything
-(**8 local commits pending**). After the first successful push, check the Actions run
-(`gh run list/watch`) — CI has never executed remotely.
+The classic PAT lacks the **`workflow`** scope (commits touch `.github/workflows/ci.yml`). Fix: user
+edits the token at https://github.com/settings/tokens → check **workflow** → Update token. Then
+`git -C C:\Dev\Membrane-AI push origin main` ships the **~11 pending commits**, and the first GitHub
+Actions run should be checked (`gh run list`).
 
 ## Current state
 
-**P0 ✓, P1 ✓, P2 started.** `task ci` green: 6 Go modules + Python gates (ruff, mypy --strict, pytest 16).
+**P0 ✓, P1 ✓, P2 well underway.** `task ci` green (6 Go modules + Python gates).
 
-- **`services/semantic`** (Python 3.11 local / 3.12 CI, FastAPI, hexagonal, D-023):
-  - domain: `EvaluationInput` (masked diff + gold context), `LocalAssessment` (findings + risk score),
-    `should_escalate` gate policy (blocking finding OR score ≥ threshold).
-  - app `EvaluateDiff`: tier-2 always; tier-3 only if escalate AND `MEMBRANE_SEMANTIC_PREMIUM_ENABLED`
-    (default off). Premium augments — never replaces — local findings.
-  - adapters: `HeuristicLocalModel` (deterministic stub until vLLM lands — explicitly labeled),
-    `DisabledPremiumConsensus` (flag-on without real adapter ⇒ loud 503), FastAPI HTTP on `:8005`
-    (`/v1/semantic/evaluate`, `/livez`, `/readyz`).
-  - Real-process smoke: readyz ✓, live evaluate ✓ (3 heuristic findings, tier=local).
-  - Tooling: `task setup:py | lint:py | test:py | run:semantic`; `task ci` includes Python; CI workflow
-    gained a `python` job (ubuntu, 3.12).
+- **D-024 implemented** — the Saga's stage chain now threads artifacts:
+  - `ports.AnalysisStage` returns `StageResult{Findings, MaskedDiff}`; a non-empty MaskedDiff rewrites
+    the diff for all later stages → **the semantic/LLM tier only ever sees the analyzer-masked diff**
+    (unit-proven: `TestHandle_MaskedDiffFlowsToLaterStages`, httptest capture of `masked_diff`).
+  - Cache key still derives from the ORIGINAL diff.
+  - **`app.Optional` decorator**: advisory-stage errors → `stage-unavailable` warning finding, never
+    the fallback (required-stage findings survive).
+- **`semanticstage` adapter**: HTTP client for `POST /v1/semantic/evaluate` (Saga ctx deadline,
+  4 MiB response cap, unknown severity → warning) + **`ResolverFetcher`** (gRPC) injecting top-3 gold
+  context, best-effort (nil fetcher / non-UUID org / fetch error ⇒ no context, stage still runs).
+- Wiring: `MEMBRANE_ORCHESTRATOR_SEMANTIC_URL` (empty = stage off) + `…_RESOLVER_ADDR` (empty = no
+  RAG). Stage chain in Kafka mode: `[analyzer, Optional(semantic)]`, fallback = secret-scan.
+- Coverage: orchestrator app 98%, semanticstage 64% (ResolverFetcher is E2E-covered glue), stages 100%.
+- **Docker engine would not start this session** → the 5-service E2E re-run is pending (item 1 below).
+- Commits local on `main` (**11 ahead**), push gated on the token fix.
 
-## Next up  (P2 continuation; see docs/ROADMAP.md)
+## Next up  (see docs/ROADMAP.md)
 
-1. **Orchestrator semantic stage**: new `AnalysisStage` adapter (`internal/adapters/semanticstage`)
-   calling `POST /v1/semantic/evaluate` over HTTP with the Saga's ctx deadline; needs the masked diff —
-   today the orchestrator passes the RAW diff between stages; decide: analyzer response's `masked_diff`
-   must flow to the semantic stage (extend `AnalysisStage` contract or chain stage outputs — design it,
-   record as D-024). Config: `MEMBRANE_ORCHESTRATOR_SEMANTIC_URL` (empty = stage off). Wire + E2E.
-2. **Resolver RAG injection**: orchestrator (or the semantic stage adapter) calls resolver
-   `ResolveContext` and forwards `gold_context` into the evaluate request. Stub embedder caveat: org
-   must be a UUID for resolver — E2E demo org should switch to a UUID.
-3. Then: real tier-2 vLLM adapter, or reporter service — whichever the user prioritizes.
+1. **5-service E2E** (first session with Docker up): `task dev-up && task migrate`; create topics; run
+   analyzer + resolver + semantic (`task run:semantic`) + orchestrator with
+   `MEMBRANE_ORCHESTRATOR_ANALYZER_ADDR=localhost:9003`, `…_SEMANTIC_URL=http://localhost:8005`,
+   `…_RESOLVER_ADDR=localhost:9004` + ingestion. POST a webhook diff containing an AWS key AND
+   "auth"/"crypto" words, **org = a UUID**. Expect verdict `rejected` with findings from BOTH stages —
+   crucially `semantic / local-heuristic:masked` proves the masked diff reached the LLM tier.
+   Also verify `verdict_audit` + `outbox.published=true`.
+2. **Reporter service** (`services/reporter`, Go): consume `code.verdict.v1`, post PR status/comments
+   (GitHub Commit Status API), Slack webhook port; hexagonal; idempotent by submission_id.
+3. Or (user's priority): real tier-2 vLLM adapter in the semantic service.
 
 ## Blockers / gotchas
 
-- **Push**: see the banner above (workflow scope).
+- **Push**: workflow scope (banner above). **Docker**: needs a manual Docker Desktop start; engine
+  flaky this machine — never block on it.
 - **Stray `GOWORK`** → ALWAYS `task …` or `GOWORK=off`. **buf** = prebuilt exe. **`-race`** = CI-only.
-- Python venv lives at `services/semantic/.venv` (gitignored); recreate with `task setup:py`.
+- Python venv: `services/semantic/.venv` (`task setup:py` recreates).
 - Integration tests: `MEMBRANE_ORCHESTRATOR_TEST_DSN` / `MEMBRANE_RESOLVER_TEST_DSN` =
-  `postgres://membrane:membrane@localhost:5432/membrane` (needs `task dev-up` + `task migrate`).
+  `postgres://membrane:membrane@localhost:5432/membrane`.
 
 ## How to verify
 
-- `task ci` → all green (Go + Python).
-- Semantic: `task run:semantic` → `GET :8005/readyz`; POST a masked diff with "auth"/"crypto" markers
-  to `/v1/semantic/evaluate` → tier=local findings; with `MEMBRANE_SEMANTIC_PREMIUM_ENABLED=1` the same
-  call returns 503 (disabled premium refuses loudly — correct until a real adapter exists).
+- `task ci` → all green.
+- D-024 story: `services/orchestrator/internal/app/process_test.go` (masked-diff threading),
+  `internal/app/optional_test.go`, `internal/adapters/semanticstage/stage_test.go` (request capture:
+  masked_diff + gold_context), `internal/adapters/grpcstage/stage_test.go` (MaskedDiff mapping).

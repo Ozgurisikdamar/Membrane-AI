@@ -41,23 +41,28 @@ func (c *fakeCache) Set(_ context.Context, key string, v domain.Verdict) error {
 }
 
 type fakeStage struct {
-	name     string
-	findings []domain.Finding
-	err      error
-	delay    time.Duration
+	name       string
+	findings   []domain.Finding
+	maskedDiff string
+	err        error
+	delay      time.Duration
+	seenDiff   *string // when set, records the diff this stage received
 }
 
 func (s fakeStage) Name() string { return s.name }
 
-func (s fakeStage) Analyze(ctx context.Context, _ domain.Submission) ([]domain.Finding, error) {
+func (s fakeStage) Analyze(ctx context.Context, sub domain.Submission) (ports.StageResult, error) {
+	if s.seenDiff != nil {
+		*s.seenDiff = sub.Diff
+	}
 	if s.delay > 0 {
 		select {
 		case <-time.After(s.delay):
 		case <-ctx.Done():
-			return nil, ctx.Err()
+			return ports.StageResult{}, ctx.Err()
 		}
 	}
-	return s.findings, s.err
+	return ports.StageResult{Findings: s.findings, MaskedDiff: s.maskedDiff}, s.err
 }
 
 type fakePublisher struct {
@@ -246,6 +251,26 @@ func TestHandle_PublishFailureIsUnavailable(t *testing.T) {
 	_, err := uc.Handle(context.Background(), sub(t))
 	if errs.KindOf(err) != errs.KindUnavailable {
 		t.Fatalf("kind = %v, want unavailable", errs.KindOf(err))
+	}
+}
+
+func TestHandle_MaskedDiffFlowsToLaterStages(t *testing.T) {
+	var semanticSaw string
+	masker := fakeStage{name: "analyzer", maskedDiff: "+key := \"[MASKED:aws]\""}
+	semantic := fakeStage{name: "semantic", seenDiff: &semanticSaw}
+	pub := &fakePublisher{}
+	uc := newUC(newFakeCache(), []ports.AnalysisStage{masker, semantic}, fakeStage{name: "fb"}, pub, app.Options{})
+
+	if _, err := uc.Handle(context.Background(), sub(t)); err != nil {
+		t.Fatal(err)
+	}
+	if semanticSaw != "+key := \"[MASKED:aws]\"" {
+		t.Fatalf("semantic stage must receive the MASKED diff (D-024), got %q", semanticSaw)
+	}
+	// The cache key must still derive from the ORIGINAL diff: a resubmission of
+	// the same raw diff has to hit the cache.
+	if pub.published[0].Source != domain.SourcePipeline {
+		t.Fatalf("source = %v", pub.published[0].Source)
 	}
 }
 

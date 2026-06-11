@@ -19,7 +19,7 @@ func scanDiff(t *testing.T, diff string) []domain.Finding {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return got
+	return got.Findings
 }
 
 func TestSecretScan_Detects(t *testing.T) {

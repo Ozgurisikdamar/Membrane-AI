@@ -13,6 +13,7 @@ import (
 	"github.com/Ozgurisikdamar/Membrane-AI/pkg/errs"
 	analyzerv1 "github.com/Ozgurisikdamar/Membrane-AI/proto/gen/membrane/analyzer/v1"
 	"github.com/Ozgurisikdamar/Membrane-AI/services/orchestrator/internal/domain"
+	"github.com/Ozgurisikdamar/Membrane-AI/services/orchestrator/internal/ports"
 )
 
 const op = "orchestrator.adapters.grpcstage"
@@ -49,8 +50,9 @@ func New(addr string, options ...Option) (*Stage, error) {
 func (*Stage) Name() string { return "analyzer" }
 
 // Analyze forwards the submission to the analyzer service and maps its
-// findings into the domain.
-func (s *Stage) Analyze(ctx context.Context, sub domain.Submission) ([]domain.Finding, error) {
+// findings — and the masked diff, which the Saga threads to all later stages
+// (D-024) — into the domain.
+func (s *Stage) Analyze(ctx context.Context, sub domain.Submission) (ports.StageResult, error) {
 	resp, err := s.client.Analyze(ctx, &analyzerv1.AnalyzeRequest{
 		SubmissionId:   sub.SubmissionID,
 		OrganizationId: sub.OrganizationID,
@@ -60,7 +62,7 @@ func (s *Stage) Analyze(ctx context.Context, sub domain.Submission) ([]domain.Fi
 		Diff:           sub.Diff,
 	})
 	if err != nil {
-		return nil, errs.Unavailable(op, "analyzer call failed", err)
+		return ports.StageResult{}, errs.Unavailable(op, "analyzer call failed", err)
 	}
 	findings := make([]domain.Finding, 0, len(resp.GetFindings()))
 	for _, f := range resp.GetFindings() {
@@ -71,7 +73,7 @@ func (s *Stage) Analyze(ctx context.Context, sub domain.Submission) ([]domain.Fi
 			Message:  f.GetMessage(),
 		})
 	}
-	return findings, nil
+	return ports.StageResult{Findings: findings, MaskedDiff: resp.GetMaskedDiff()}, nil
 }
 
 func severityFromProto(s analyzerv1.Severity) domain.Severity {

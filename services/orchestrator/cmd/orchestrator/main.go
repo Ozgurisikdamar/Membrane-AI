@@ -22,6 +22,7 @@ import (
 	"github.com/Ozgurisikdamar/Membrane-AI/services/orchestrator/internal/adapters/memorypublisher"
 	"github.com/Ozgurisikdamar/Membrane-AI/services/orchestrator/internal/adapters/outboxstore"
 	"github.com/Ozgurisikdamar/Membrane-AI/services/orchestrator/internal/adapters/rediscache"
+	"github.com/Ozgurisikdamar/Membrane-AI/services/orchestrator/internal/adapters/semanticstage"
 	"github.com/Ozgurisikdamar/Membrane-AI/services/orchestrator/internal/adapters/stages"
 	"github.com/Ozgurisikdamar/Membrane-AI/services/orchestrator/internal/app"
 	"github.com/Ozgurisikdamar/Membrane-AI/services/orchestrator/internal/config"
@@ -113,23 +114,40 @@ func wire(cfg config.Config, fallback ports.AnalysisStage, healthH *health.Handl
 		RulesetVersion:   cfg.RulesetVersion,
 	}
 
-	// Stage chain: the remote analyzer when configured, else the in-process
-	// secret scan. The secret scan always remains the deterministic fallback.
+	// Stage chain: the remote analyzer when configured (else the in-process
+	// secret scan), then the advisory semantic stage when configured. The
+	// secret scan always remains the deterministic fallback.
 	stagesChain := []ports.AnalysisStage{fallback}
-	var stageCleanup func()
+	var stageCleanups []func()
 	if cfg.AnalyzerAddr != "" {
 		remote, rerr := grpcstage.New(cfg.AnalyzerAddr)
 		if rerr != nil {
 			return nil, nil, nil, nil, rerr
 		}
 		stagesChain = []ports.AnalysisStage{remote}
-		stageCleanup = func() { _ = remote.Close() }
+		stageCleanups = append(stageCleanups, func() { _ = remote.Close() })
 		log.Info("analyzer stage enabled", "addr", cfg.AnalyzerAddr)
+	}
+	if cfg.SemanticURL != "" {
+		var fetcher semanticstage.ContextFetcher
+		if cfg.ResolverAddr != "" {
+			rf, rerr := semanticstage.NewResolverFetcher(cfg.ResolverAddr)
+			if rerr != nil {
+				return nil, nil, nil, nil, rerr
+			}
+			stageCleanups = append(stageCleanups, func() { _ = rf.Close() })
+			fetcher = rf
+			log.Info("resolver RAG context enabled", "addr", cfg.ResolverAddr)
+		}
+		// Advisory tier (D-024): wrapped in Optional so its failure surfaces
+		// as a warning finding instead of erasing required-stage findings.
+		stagesChain = append(stagesChain, app.Optional(semanticstage.New(cfg.SemanticURL, fetcher)))
+		log.Info("semantic stage enabled", "url", cfg.SemanticURL)
 	}
 
 	closeStage := func() {
-		if stageCleanup != nil {
-			stageCleanup()
+		for _, c := range stageCleanups {
+			c()
 		}
 	}
 

@@ -20,6 +20,12 @@ type Config struct {
 	// AnalyzerAddr is the gRPC address of the analyzer service; empty means
 	// "use the in-process secret-scan stage only".
 	AnalyzerAddr string
+	// SemanticURL is the base URL of the semantic service (e.g.
+	// "http://localhost:8005"); empty disables the advisory semantic stage.
+	SemanticURL string
+	// ResolverAddr is the gRPC address of the resolver; empty disables RAG
+	// context injection into the semantic stage.
+	ResolverAddr string
 	// DatabaseURL is the Postgres DSN for the verdict audit + outbox (D-013).
 	DatabaseURL      string
 	OutboxInterval   time.Duration
@@ -43,6 +49,8 @@ func Load() (Config, error) {
 		ConsumerGroup:    l.String("CONSUMER_GROUP", "orchestrator"),
 		RedisAddr:        l.String("REDIS_ADDR", "localhost:6379"),
 		AnalyzerAddr:     l.String("ANALYZER_ADDR", ""),
+		SemanticURL:      l.String("SEMANTIC_URL", ""),
+		ResolverAddr:     l.String("RESOLVER_ADDR", ""),
 		DatabaseURL:      l.String("DATABASE_URL", "postgres://membrane:membrane@localhost:5432/membrane"),
 		OutboxInterval:   l.Duration("OUTBOX_INTERVAL", 500*time.Millisecond),
 		OutboxBatch:      l.Int("OUTBOX_BATCH", 100),

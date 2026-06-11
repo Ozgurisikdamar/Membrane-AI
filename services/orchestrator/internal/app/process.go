@@ -109,18 +109,23 @@ func (uc *ProcessSubmission) Handle(ctx context.Context, sub domain.Submission) 
 
 // analyze runs the staged pipeline; on any stage failure or deadline breach it
 // degrades to the deterministic fallback (never returns an error: the Saga
-// always yields a verdict).
+// always yields a verdict). A stage that returns a masked diff rewrites the
+// artifact for every later stage (D-024).
 func (uc *ProcessSubmission) analyze(ctx context.Context, sub domain.Submission) domain.Verdict {
 	stageCtx, cancel := context.WithTimeout(ctx, uc.opts.StageDeadline)
 	defer cancel()
 
 	var findings []domain.Finding
+	current := sub // local copy: stages may redact the diff for later stages
 	for _, stage := range uc.stages {
-		out, err := stage.Analyze(stageCtx, sub)
+		out, err := stage.Analyze(stageCtx, current)
 		if err != nil {
 			return uc.runFallback(ctx, sub)
 		}
-		findings = append(findings, out...)
+		findings = append(findings, out.Findings...)
+		if out.MaskedDiff != "" {
+			current.Diff = out.MaskedDiff
+		}
 	}
 
 	return domain.Verdict{
@@ -140,7 +145,8 @@ func (uc *ProcessSubmission) runFallback(ctx context.Context, sub domain.Submiss
 	fbCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), uc.opts.FallbackDeadline)
 	defer cancel()
 
-	findings, err := uc.fallback.Analyze(fbCtx, sub)
+	out, err := uc.fallback.Analyze(fbCtx, sub)
+	findings := out.Findings
 	decision := domain.Consolidate(findings)
 	if err != nil {
 		// Even the fallback failed: fail safe — demand human review.

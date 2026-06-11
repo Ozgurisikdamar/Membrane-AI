@@ -49,7 +49,9 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done.
       escalation policy in domain, ruff+mypy-strict+pytest green, D-023)
       - [ ] real tier-2 local model (vLLM) adapter
       - [ ] real tier-3 premium consensus (Claude Sonnet 4.6 + Gemini) adapter + key handling decision
-      - [ ] orchestrator semantic stage (HTTP client w/ Saga deadline) + resolver RAG context injection
+      - [x] **orchestrator semantic stage** (`semanticstage` HTTP adapter w/ Saga deadline) + **resolver
+            RAG injection** (`ResolverFetcher`, best-effort) — D-024: `StageResult` threads the masked
+            diff to later stages; `app.Optional` decorator keeps advisory failures non-fatal
 - [ ] **Point-of-generation prompt/MCP gateway**
 - [ ] **MCP gateway + tool-call governance + package firewall + shadow-AI discovery**
 - [ ] **Reporter** — IDE inline fixes, PR status/comments, Slack/Jira/SIEM, verdict audit

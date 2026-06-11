@@ -18,11 +18,20 @@ type VerdictCache interface {
 	Set(ctx context.Context, key string, v domain.Verdict) error
 }
 
-// AnalysisStage is one Strategy in the Saga's analysis chain (AST, vector
-// context, semantic consensus, …). Implementations must honor ctx deadlines.
+// StageResult is what one analysis stage produces (D-024).
+type StageResult struct {
+	Findings []domain.Finding
+	// MaskedDiff, when non-empty, REPLACES the diff seen by all later stages —
+	// this is the masking guarantee: once the analyzer redacts secrets, no
+	// downstream (LLM) stage ever sees the raw values.
+	MaskedDiff string
+}
+
+// AnalysisStage is one Strategy in the Saga's analysis chain (static analysis,
+// semantic consensus, …). Implementations must honor ctx deadlines.
 type AnalysisStage interface {
 	Name() string
-	Analyze(ctx context.Context, sub domain.Submission) ([]domain.Finding, error)
+	Analyze(ctx context.Context, sub domain.Submission) (StageResult, error)
 }
 
 // VerdictPublisher emits the consolidated verdict for downstream consumers

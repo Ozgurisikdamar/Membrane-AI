@@ -57,17 +57,19 @@ func sub(t *testing.T) domain.Submission {
 	return s
 }
 
-func TestAnalyze_MapsFindings(t *testing.T) {
+func TestAnalyze_MapsFindingsAndMaskedDiff(t *testing.T) {
 	stage := newStage(t, &fakeAnalyzer{resp: &analyzerv1.AnalyzeResponse{
 		Findings: []*analyzerv1.Finding{
 			{Rule: "aws-access-key-id", Severity: analyzerv1.Severity_SEVERITY_BLOCKING, Message: "m", Line: 2},
 			{Rule: "weird", Severity: analyzerv1.Severity_SEVERITY_UNSPECIFIED, Message: "u"},
 		},
+		MaskedDiff: "+key := \"[MASKED:aws-access-key-id]\"",
 	}})
-	findings, err := stage.Analyze(context.Background(), sub(t))
+	out, err := stage.Analyze(context.Background(), sub(t))
 	if err != nil {
 		t.Fatal(err)
 	}
+	findings := out.Findings
 	if len(findings) != 2 {
 		t.Fatalf("findings = %+v", findings)
 	}
@@ -76,6 +78,9 @@ func TestAnalyze_MapsFindings(t *testing.T) {
 	}
 	if findings[1].Severity != domain.SeverityWarning {
 		t.Fatalf("unknown severity must fail safe as warning: %+v", findings[1])
+	}
+	if out.MaskedDiff != "+key := \"[MASKED:aws-access-key-id]\"" {
+		t.Fatalf("masked diff must be carried into the stage result (D-024): %q", out.MaskedDiff)
 	}
 }
 

@@ -10,6 +10,7 @@ import (
 	"regexp"
 
 	"github.com/Ozgurisikdamar/Membrane-AI/services/orchestrator/internal/domain"
+	"github.com/Ozgurisikdamar/Membrane-AI/services/orchestrator/internal/ports"
 )
 
 // secretPattern pairs a rule name with a compiled detector.
@@ -42,9 +43,9 @@ func (s *SecretScan) Name() string { return "secret-scan" }
 
 // Analyze screens the diff for leaked credentials. Every match is a blocking
 // finding: leaked secrets are never acceptable to merge.
-func (s *SecretScan) Analyze(ctx context.Context, sub domain.Submission) ([]domain.Finding, error) {
+func (s *SecretScan) Analyze(ctx context.Context, sub domain.Submission) (ports.StageResult, error) {
 	if err := ctx.Err(); err != nil {
-		return nil, err
+		return ports.StageResult{}, err
 	}
 	var findings []domain.Finding
 	for _, p := range s.patterns {
@@ -57,5 +58,5 @@ func (s *SecretScan) Analyze(ctx context.Context, sub domain.Submission) ([]doma
 			})
 		}
 	}
-	return findings, nil
+	return ports.StageResult{Findings: findings}, nil
 }
