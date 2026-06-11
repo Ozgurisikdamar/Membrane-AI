@@ -64,6 +64,11 @@ re-run its install line and re-open the shell.
 Config is via env vars `MEMBRANE_<SVC>_…` (see each service's `internal/config`). Local defaults live in
 `deploy/compose/.env.example` (copy to `.env`, which is gitignored).
 
+**Tracing (D-032):** set `MEMBRANE_<SVC>_OTLP_ENDPOINT` (or `MEMBRANE_OTLP_ENDPOINT` for the full
+compose profile / `infra.otlpEndpoint` in Helm) to an OTLP/gRPC collector to turn on distributed
+tracing; empty = off. Services use `pkg/observability` (`Setup`/`Stop`/`Start`/`InjectHeaders`/
+`ExtractContext`) — never import otel directly.
+
 ## 4. Codegen (protobuf / gRPC)
 
 - Contracts live in `proto/membrane/<svc>/v1/*.proto`, package `membrane.<svc>.v1`.

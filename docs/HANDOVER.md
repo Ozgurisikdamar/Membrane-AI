@@ -3,7 +3,7 @@
 > **On "devam et": read this file, then do "Next up". Update this file before the session ends.**
 > Keep it short and current — this is state, not history.
 
-_Last updated: 2026-06-11 — session: P3 part 6 (premium tier-3 consensus, D-031)._
+_Last updated: 2026-06-12 — session: P3 part 7 (OpenTelemetry observability, D-032)._
 
 ## Push policy
 
@@ -21,7 +21,18 @@ The user pushes manually (`git push` in their own terminal). Check pending:
 ## Current state
 
 **P0 ✓ P1 ✓ P2 ✓ — P3 in flight.** `task ci` green: 8 Go modules + Python (36 pytest);
-`task helm:lint` green (helm lint + template + kubeconform 12/12).
+`task helm:lint` green (helm lint + template + kubeconform).
+
+- **Observability foundation done (D-032)**: `pkg/observability` — `Setup` installs the W3C
+  propagator always + an OTLP/gRPC trace exporter only when `OTLP_ENDPOINT` is set (empty = no-op,
+  prod-safe). Helpers `Stop`/`Start`/`InjectHeaders`/`ExtractContext`/`TraceID` keep otel out of
+  domain/app (adapters + composition only). All 5 Go services wire `Setup`/`Stop` + config
+  `MEMBRANE_<SVC>_OTLP_ENDPOINT`/`_OTLP_INSECURE`. **Distributed trace across Kafka**: ingestion
+  opens the span + stamps W3C headers on the submission record; orchestrator extracts + spans the
+  Saga (one trace ingestion→orchestrator). Helm `infra.otlpEndpoint` + compose `MEMBRANE_OTLP_ENDPOINT`.
+- **Deferred (next increment, not gaps)**: otelgrpc/otelhttp auto-instrumentation, OTel metrics,
+  Python (semantic) tracing, verdict-side propagation through the outbox (reporter currently starts
+  a fresh trace), a bundled collector + dashboards.
 
 - **Premium tier-3 consensus done (D-031)**: `semantic/adapters/premium_consensus.py` — Claude
   Sonnet 4.6 (Anthropic Messages API) + Gemini (generateContent) via httpx, NO SDK. `DualModelConsensus`
@@ -81,8 +92,9 @@ The user pushes manually (`git push` in their own terminal). Check pending:
 
 ## Next up  (P3 continuation; see docs/ROADMAP.md)
 
-1. **Observability** (OpenTelemetry traces/metrics/logs across services) — the SRE story; the deps
-   table in ENGINEERING-STANDARDS already names OTel.
+1. **Observability increment 2**: otelgrpc/otelhttp auto-instrumentation (so analyzer/resolver/
+   semantic hops join the trace), OTel metrics, Python (semantic) tracing, outbox-side verdict
+   propagation, a bundled collector in compose + a dashboard.
 2. **CLI packaging matrix** (winget/brew/deb/rpm/tarball) — release engineering for the Code Sweeper.
 3. **Accuracy & evaluation harness** (golden datasets, precision/recall, FP-rate SLO) — the quality
    bar for the analysis pipeline.

@@ -84,7 +84,12 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done.
 - [ ] **IDE extension** (VS Code / Cursor)
 - [ ] **SCM integration** (GitHub/GitLab) end-to-end
 - [ ] **Shadow-mode → enforcement** merge gates
-- [ ] **Observability & SRE** (OpenTelemetry, SLOs, dashboards)
+- [~] **Observability & SRE** (OpenTelemetry, SLOs, dashboards)
+      - [x] **`pkg/observability` (D-032)**: OTLP/gRPC trace exporter gated on endpoint, W3C
+            propagation, Kafka header carrier, slog bridge; wired into all 5 Go services with
+            cross-Kafka distributed tracing (ingestion→orchestrator), Helm + compose OTLP wiring
+      - [ ] otelgrpc/otelhttp auto-instrumentation, OTel metrics, Python tracing, outbox-side
+            propagation, bundled collector + dashboards, SLOs
 - [~] **Deployment**: SaaS / VPC / air-gapped — Terraform + Helm; multi-arch images; static client packaging
       - [x] **Container images (D-029)**: parameterized distroless Dockerfile for all Go services +
             python-slim semantic; `task build:images`; `docker-compose.full.yml` all-container profile

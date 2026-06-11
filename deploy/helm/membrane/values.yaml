@@ -21,6 +21,10 @@ imagePullSecrets: []
 infra:
   kafkaBrokers: "kafka:9092"
   redisAddr: "redis:6379"
+  # OTLP/gRPC collector address for distributed tracing (D-032). Empty disables
+  # tracing fleet-wide; otlpInsecure uses plaintext gRPC for in-cluster collectors.
+  otlpEndpoint: ""
+  otlpInsecure: true
   # Tier-2 vLLM endpoint (OpenAI-compatible). Empty = heuristic-only (D-028).
   vllmUrl: ""
   vllmModel: "deepseek-coder"
@@ -98,6 +102,8 @@ services:
     healthEnv: MEMBRANE_INGESTION_HEALTH_ADDR
     env:
       MEMBRANE_INGESTION_KAFKA_BROKERS: "{{ .Values.infra.kafkaBrokers }}"
+      MEMBRANE_INGESTION_OTLP_ENDPOINT: "{{ .Values.infra.otlpEndpoint }}"
+      MEMBRANE_INGESTION_OTLP_INSECURE: "{{ .Values.infra.otlpInsecure }}"
     secretEnv:
       MEMBRANE_INGESTION_WEBHOOK_SECRET: webhookSecret
 
@@ -114,6 +120,8 @@ services:
       MEMBRANE_ORCHESTRATOR_ANALYZER_ADDR: '{{ include "membrane.svcFullname" (dict "root" . "svcName" "analyzer") }}:9003'
       MEMBRANE_ORCHESTRATOR_SEMANTIC_URL: 'http://{{ include "membrane.svcFullname" (dict "root" . "svcName" "semantic") }}:8005'
       MEMBRANE_ORCHESTRATOR_RESOLVER_ADDR: '{{ include "membrane.svcFullname" (dict "root" . "svcName" "resolver") }}:9004'
+      MEMBRANE_ORCHESTRATOR_OTLP_ENDPOINT: "{{ .Values.infra.otlpEndpoint }}"
+      MEMBRANE_ORCHESTRATOR_OTLP_INSECURE: "{{ .Values.infra.otlpInsecure }}"
     secretEnv:
       MEMBRANE_ORCHESTRATOR_DATABASE_URL: databaseUrl
 
@@ -127,7 +135,9 @@ services:
         addrEnv: MEMBRANE_ANALYZER_GRPC_ADDR
     healthPort: 8103
     healthEnv: MEMBRANE_ANALYZER_HEALTH_ADDR
-    env: {}
+    env:
+      MEMBRANE_ANALYZER_OTLP_ENDPOINT: "{{ .Values.infra.otlpEndpoint }}"
+      MEMBRANE_ANALYZER_OTLP_INSECURE: "{{ .Values.infra.otlpInsecure }}"
     secretEnv: {}
 
   resolver:
@@ -140,7 +150,9 @@ services:
         addrEnv: MEMBRANE_RESOLVER_GRPC_ADDR
     healthPort: 8104
     healthEnv: MEMBRANE_RESOLVER_HEALTH_ADDR
-    env: {}
+    env:
+      MEMBRANE_RESOLVER_OTLP_ENDPOINT: "{{ .Values.infra.otlpEndpoint }}"
+      MEMBRANE_RESOLVER_OTLP_INSECURE: "{{ .Values.infra.otlpInsecure }}"
     secretEnv:
       MEMBRANE_RESOLVER_DATABASE_URL: databaseUrl
 
