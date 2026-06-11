@@ -6,31 +6,16 @@ package kafkabus
 
 import (
 	"context"
-	"encoding/json"
 	"log/slog"
-	"time"
 
 	"github.com/twmb/franz-go/pkg/kgo"
 
 	"github.com/Ozgurisikdamar/Membrane-AI/pkg/errs"
+	"github.com/Ozgurisikdamar/Membrane-AI/services/orchestrator/internal/adapters/codec"
 	"github.com/Ozgurisikdamar/Membrane-AI/services/orchestrator/internal/domain"
 )
 
 const opConsumer = "orchestrator.adapters.kafkabus.Consumer"
-
-// submissionEnvelope mirrors the JSON the ingestion service produces
-// (services/ingestion/internal/adapters/kafka). Keep the two in sync until the
-// envelope moves to a shared schema package (ROADMAP P1, outbox item).
-type submissionEnvelope struct {
-	SubmissionID   string    `json:"submission_id"`
-	OrganizationID string    `json:"organization_id"`
-	Repository     string    `json:"repository"`
-	FilePath       string    `json:"file_path"`
-	Language       string    `json:"language"`
-	Origin         string    `json:"origin"`
-	Diff           string    `json:"diff"`
-	OccurredAt     time.Time `json:"occurred_at"`
-}
 
 // Processor is the use-case the consumer drives (narrow interface on the
 // consumer side).
@@ -80,17 +65,10 @@ func (c *Consumer) Run(ctx context.Context) error {
 }
 
 func (c *Consumer) handleRecord(ctx context.Context, rec *kgo.Record) {
-	var env submissionEnvelope
-	if err := json.Unmarshal(rec.Value, &env); err != nil {
-		c.log.Error("skipping malformed submission record", "offset", rec.Offset, "err", err)
-		return
-	}
-	sub, err := domain.NewSubmission(
-		env.SubmissionID, env.OrganizationID, env.Repository,
-		env.FilePath, env.Language, env.Diff, env.Origin, env.OccurredAt,
-	)
+	sub, err := codec.DecodeSubmission(rec.Value)
 	if err != nil {
-		c.log.Error("skipping invalid submission", "submission_id", env.SubmissionID, "err", err)
+		// Poison messages must not wedge the partition: log and skip.
+		c.log.Error("skipping invalid submission record", "offset", rec.Offset, "err", err)
 		return
 	}
 	verdict, err := c.proc.Handle(ctx, sub)

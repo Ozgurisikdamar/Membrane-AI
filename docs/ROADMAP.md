@@ -36,7 +36,11 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done.
       pgx/halfvec adapter (live-DB integration test green), stub `Embedder` (D-020), RAG top-k query
       - [ ] swap stub embedder for real embeddings once the semantic service exists
       - [ ] orchestrator/semantic stage consumes resolver context (P2, with the semantic service)
-- [ ] **Transactional outbox** for DB↔Kafka consistency (schema is ready in 0001_init; relay + shared envelope pkg pending)
+- [x] **Transactional outbox** (D-013/D-021): orchestrator writes `verdict_audit` + `outbox` in one ACID
+      tx (`outboxstore.Store` implements the Saga's publisher port); in-process relay ships pending rows
+      with `FOR UPDATE SKIP LOCKED` — proven by live-DB integration test + E2E (audit row, published=true)
+- [x] **Shared envelope package** (`pkg/envelope`, golden-JSON tested) — single wire contract; ingestion
+      and orchestrator adapters refactored onto it via `orchestrator/internal/adapters/codec` (schema is ready in 0001_init; relay + shared envelope pkg pending)
 
 ## P2 — Semantic engine, gateway & agentic governance
 

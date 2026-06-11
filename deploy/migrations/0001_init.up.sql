@@ -49,11 +49,14 @@ CREATE TABLE IF NOT EXISTS architectural_rulesets (
 CREATE INDEX IF NOT EXISTS architectural_rulesets_org
     ON architectural_rulesets (org_id, version);
 
--- Tamper-evident verdict audit trail (append-only by convention).
+-- Tamper-evident verdict audit trail (append-only by convention). org_id is a
+-- free-form tenant string (no FK): the audit log must never lose a verdict
+-- because an org row is not provisioned yet — tenancy is enforced at the
+-- gold-index boundary, not here (D-022).
 CREATE TABLE IF NOT EXISTS verdict_audit (
     audit_id      UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     submission_id UUID         NOT NULL,
-    org_id        UUID         NOT NULL REFERENCES enterprise_organization(org_id) ON DELETE CASCADE,
+    org_id        VARCHAR(128) NOT NULL,
     verdict       VARCHAR(32)  NOT NULL,
     source        VARCHAR(32)  NOT NULL, -- cache | pipeline | fallback
     model         VARCHAR(128) NOT NULL DEFAULT '',

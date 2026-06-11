@@ -2,34 +2,16 @@ package kafkabus
 
 import (
 	"context"
-	"encoding/json"
 	"time"
 
 	"github.com/twmb/franz-go/pkg/kgo"
 
 	"github.com/Ozgurisikdamar/Membrane-AI/pkg/errs"
+	"github.com/Ozgurisikdamar/Membrane-AI/services/orchestrator/internal/adapters/codec"
 	"github.com/Ozgurisikdamar/Membrane-AI/services/orchestrator/internal/domain"
 )
 
 const opPublisher = "orchestrator.adapters.kafkabus.Publisher"
-
-// verdictEnvelope is the on-the-wire JSON shape of code.verdict.v1.
-type verdictEnvelope struct {
-	SubmissionID   string           `json:"submission_id"`
-	OrganizationID string           `json:"organization_id"`
-	Decision       string           `json:"decision"`
-	Source         string           `json:"source"`
-	RulesetVersion string           `json:"ruleset_version"`
-	Findings       []verdictFinding `json:"findings"`
-	EvaluatedAt    time.Time        `json:"evaluated_at"`
-}
-
-type verdictFinding struct {
-	Stage    string `json:"stage"`
-	Rule     string `json:"rule"`
-	Severity string `json:"severity"`
-	Message  string `json:"message"`
-}
 
 // Publisher produces verdicts to the verdict topic, keyed by organization ID
 // (same per-tenant ordering guarantee as submissions).
@@ -51,27 +33,20 @@ func NewPublisher(brokers []string, topic string) (*Publisher, error) {
 	return &Publisher{client: client, topic: topic}, nil
 }
 
-// Publish marshals and produces the verdict synchronously.
+// Publish marshals and produces the verdict synchronously (direct path; the
+// outbox relay uses PublishRecord with pre-encoded payloads instead).
 func (p *Publisher) Publish(ctx context.Context, v domain.Verdict) error {
-	findings := make([]verdictFinding, 0, len(v.Findings))
-	for _, f := range v.Findings {
-		findings = append(findings, verdictFinding{
-			Stage: f.Stage, Rule: f.Rule, Severity: string(f.Severity), Message: f.Message,
-		})
-	}
-	payload, err := json.Marshal(verdictEnvelope{
-		SubmissionID:   v.SubmissionID,
-		OrganizationID: v.OrganizationID,
-		Decision:       string(v.Decision),
-		Source:         string(v.Source),
-		RulesetVersion: v.RulesetVersion,
-		Findings:       findings,
-		EvaluatedAt:    v.EvaluatedAt,
-	})
+	payload, err := codec.EncodeVerdict(v)
 	if err != nil {
-		return errs.Internal(opPublisher, "marshal verdict", err)
+		return err
 	}
-	rec := &kgo.Record{Topic: p.topic, Key: []byte(v.OrganizationID), Value: payload}
+	return p.PublishRecord(ctx, p.topic, []byte(v.OrganizationID), payload)
+}
+
+// PublishRecord produces a raw record; used by the outbox relay, which reads
+// already-encoded payloads from the outbox table.
+func (p *Publisher) PublishRecord(ctx context.Context, topic string, key, value []byte) error {
+	rec := &kgo.Record{Topic: topic, Key: key, Value: value}
 	if err := p.client.ProduceSync(ctx, rec).FirstErr(); err != nil {
 		return errs.Unavailable(opPublisher, "produce record", err)
 	}

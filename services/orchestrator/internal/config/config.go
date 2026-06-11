@@ -19,7 +19,11 @@ type Config struct {
 	RedisAddr       string
 	// AnalyzerAddr is the gRPC address of the analyzer service; empty means
 	// "use the in-process secret-scan stage only".
-	AnalyzerAddr     string
+	AnalyzerAddr string
+	// DatabaseURL is the Postgres DSN for the verdict audit + outbox (D-013).
+	DatabaseURL      string
+	OutboxInterval   time.Duration
+	OutboxBatch      int
 	CacheTTL         time.Duration
 	StageDeadline    time.Duration
 	FallbackDeadline time.Duration
@@ -39,6 +43,9 @@ func Load() (Config, error) {
 		ConsumerGroup:    l.String("CONSUMER_GROUP", "orchestrator"),
 		RedisAddr:        l.String("REDIS_ADDR", "localhost:6379"),
 		AnalyzerAddr:     l.String("ANALYZER_ADDR", ""),
+		DatabaseURL:      l.String("DATABASE_URL", "postgres://membrane:membrane@localhost:5432/membrane"),
+		OutboxInterval:   l.Duration("OUTBOX_INTERVAL", 500*time.Millisecond),
+		OutboxBatch:      l.Int("OUTBOX_BATCH", 100),
 		CacheTTL:         l.Duration("CACHE_TTL", 72*time.Hour),
 		StageDeadline:    l.Duration("STAGE_DEADLINE", 1200*time.Millisecond),
 		FallbackDeadline: l.Duration("FALLBACK_DEADLINE", 200*time.Millisecond),

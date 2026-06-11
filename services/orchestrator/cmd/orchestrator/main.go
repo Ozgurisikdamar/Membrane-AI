@@ -20,6 +20,7 @@ import (
 	"github.com/Ozgurisikdamar/Membrane-AI/services/orchestrator/internal/adapters/kafkabus"
 	"github.com/Ozgurisikdamar/Membrane-AI/services/orchestrator/internal/adapters/memorycache"
 	"github.com/Ozgurisikdamar/Membrane-AI/services/orchestrator/internal/adapters/memorypublisher"
+	"github.com/Ozgurisikdamar/Membrane-AI/services/orchestrator/internal/adapters/outboxstore"
 	"github.com/Ozgurisikdamar/Membrane-AI/services/orchestrator/internal/adapters/rediscache"
 	"github.com/Ozgurisikdamar/Membrane-AI/services/orchestrator/internal/adapters/stages"
 	"github.com/Ozgurisikdamar/Membrane-AI/services/orchestrator/internal/app"
@@ -52,7 +53,7 @@ func run(log *slog.Logger) error {
 	healthH := health.New(2 * time.Second)
 
 	secretScan := stages.NewSecretScan()
-	saga, consumer, cleanup, err := wire(cfg, secretScan, healthH, log)
+	saga, consumer, relay, cleanup, err := wire(cfg, secretScan, healthH, log)
 	if err != nil {
 		return err
 	}
@@ -80,6 +81,13 @@ func run(log *slog.Logger) error {
 		log.Warn("orchestrator running in in-memory mode (no Kafka consumer) — dev only", "saga_ready", saga != nil)
 	}
 
+	if relay != nil {
+		go func() {
+			log.Info("outbox relay running", "interval", cfg.OutboxInterval, "batch", cfg.OutboxBatch)
+			relay.Run(ctx)
+		}()
+	}
+
 	select {
 	case <-ctx.Done():
 		log.Info("shutdown signal received")
@@ -96,9 +104,9 @@ func run(log *slog.Logger) error {
 	return nil
 }
 
-// wire builds the Saga and (in Kafka mode) the consumer; returns a cleanup that
-// closes adapters in reverse order.
-func wire(cfg config.Config, fallback ports.AnalysisStage, healthH *health.Handler, log *slog.Logger) (*app.ProcessSubmission, *kafkabus.Consumer, func(), error) {
+// wire builds the Saga and (in Kafka mode) the consumer and outbox relay;
+// returns a cleanup that closes adapters in reverse order.
+func wire(cfg config.Config, fallback ports.AnalysisStage, healthH *health.Handler, log *slog.Logger) (*app.ProcessSubmission, *kafkabus.Consumer, *outboxstore.Relay, func(), error) {
 	opts := app.Options{
 		StageDeadline:    cfg.StageDeadline,
 		FallbackDeadline: cfg.FallbackDeadline,
@@ -112,7 +120,7 @@ func wire(cfg config.Config, fallback ports.AnalysisStage, healthH *health.Handl
 	if cfg.AnalyzerAddr != "" {
 		remote, rerr := grpcstage.New(cfg.AnalyzerAddr)
 		if rerr != nil {
-			return nil, nil, nil, rerr
+			return nil, nil, nil, nil, rerr
 		}
 		stagesChain = []ports.AnalysisStage{remote}
 		stageCleanup = func() { _ = remote.Close() }
@@ -128,35 +136,50 @@ func wire(cfg config.Config, fallback ports.AnalysisStage, healthH *health.Handl
 	if cfg.UseInMemory {
 		saga := app.NewProcessSubmission(
 			memorycache.New(), stagesChain, fallback, memorypublisher.New(), systemClock{}, opts)
-		return saga, nil, closeStage, nil
+		return saga, nil, nil, closeStage, nil
 	}
 
 	cache := rediscache.New(cfg.RedisAddr, cfg.CacheTTL)
 	healthH.Register("redis", cache.Ping)
 
-	publisher, err := kafkabus.NewPublisher(cfg.KafkaBrokers, cfg.VerdictTopic)
+	// Durability first (D-013): the Saga publishes into the transactional
+	// outbox (audit + event in one ACID tx); the relay ships pending rows to
+	// Kafka asynchronously.
+	store, err := outboxstore.New(context.Background(), cfg.DatabaseURL, cfg.VerdictTopic)
 	if err != nil {
 		_ = cache.Close()
 		closeStage()
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
+	}
+	healthH.Register("postgres", store.Ping)
+
+	publisher, err := kafkabus.NewPublisher(cfg.KafkaBrokers, cfg.VerdictTopic)
+	if err != nil {
+		store.Close()
+		_ = cache.Close()
+		closeStage()
+		return nil, nil, nil, nil, err
 	}
 
-	saga := app.NewProcessSubmission(cache, stagesChain, fallback, publisher, systemClock{}, opts)
+	saga := app.NewProcessSubmission(cache, stagesChain, fallback, store, systemClock{}, opts)
+	relay := outboxstore.NewRelay(store, publisher.PublishRecord, cfg.OutboxInterval, cfg.OutboxBatch, log)
 
 	consumer, err := kafkabus.NewConsumer(cfg.KafkaBrokers, cfg.SubmissionTopic, cfg.ConsumerGroup, saga, log)
 	if err != nil {
 		publisher.Close()
+		store.Close()
 		_ = cache.Close()
 		closeStage()
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 	healthH.Register("kafka", consumer.Ping)
 
 	cleanup := func() {
 		consumer.Close()
 		publisher.Close()
+		store.Close()
 		_ = cache.Close()
 		closeStage()
 	}
-	return saga, consumer, cleanup, nil
+	return saga, consumer, relay, cleanup, nil
 }

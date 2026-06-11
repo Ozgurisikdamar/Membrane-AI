@@ -1,6 +1,7 @@
 // Package kafka implements the EventPublisher port against Redpanda/Kafka using
 // franz-go. Events are published keyed by organization ID so a tenant's stream
-// stays strictly ordered (ARCHITECTURE §3).
+// stays strictly ordered (ARCHITECTURE §3). The wire schema lives in
+// pkg/envelope — shared with every consumer.
 package kafka
 
 import (
@@ -10,24 +11,12 @@ import (
 
 	"github.com/twmb/franz-go/pkg/kgo"
 
+	"github.com/Ozgurisikdamar/Membrane-AI/pkg/envelope"
 	"github.com/Ozgurisikdamar/Membrane-AI/pkg/errs"
 	"github.com/Ozgurisikdamar/Membrane-AI/services/ingestion/internal/ports"
 )
 
 const op = "ingestion.adapters.kafka"
-
-// envelope is the on-the-wire JSON shape of a published event. Kept explicit so
-// the contract is reviewable and stable independent of internal structs.
-type envelope struct {
-	SubmissionID   string    `json:"submission_id"`
-	OrganizationID string    `json:"organization_id"`
-	Repository     string    `json:"repository"`
-	FilePath       string    `json:"file_path"`
-	Language       string    `json:"language"`
-	Origin         string    `json:"origin"`
-	Diff           string    `json:"diff"`
-	OccurredAt     time.Time `json:"occurred_at"`
-}
 
 // Publisher produces submission events to a Kafka topic.
 type Publisher struct {
@@ -50,7 +39,7 @@ func NewPublisher(brokers []string, topic string) (*Publisher, error) {
 
 // Publish marshals the event and produces it synchronously, keyed by org ID.
 func (p *Publisher) Publish(ctx context.Context, e ports.Event) error {
-	payload, err := json.Marshal(envelope{
+	payload, err := json.Marshal(envelope.SubmissionV1{
 		SubmissionID:   e.SubmissionID,
 		OrganizationID: e.OrganizationID,
 		Repository:     e.Submission.Repository,
