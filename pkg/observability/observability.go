@@ -1,0 +1,103 @@
+// Package observability is the shared OpenTelemetry foundation for every
+// MEMBRANE.AI service: one Setup call wires a resource, an OTLP/gRPC trace
+// exporter (gated on an endpoint so dev/test stay zero-dependency) and the W3C
+// propagator. Helpers carry trace context across Kafka records and expose the
+// active trace ID for log correlation.
+//
+// Design: the W3C propagator is ALWAYS installed so context flows even when
+// tracing is disabled; only the exporter + SDK TracerProvider are conditional.
+// With no endpoint the global provider stays the no-op, so spans cost nothing.
+package observability
+
+import (
+	"context"
+
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
+	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/sdk/resource"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/trace"
+)
+
+// Config configures the trace pipeline for one service.
+type Config struct {
+	ServiceName    string
+	ServiceVersion string
+	// OTLPEndpoint is host:port of an OTLP/gRPC collector. Empty disables the
+	// exporter entirely (no-op tracing) — the production-safe default.
+	OTLPEndpoint string
+	// Insecure sends over plaintext gRPC (dev collectors); production uses TLS.
+	Insecure bool
+}
+
+// Shutdown flushes and stops the trace pipeline; safe to call on a disabled setup.
+type Shutdown func(context.Context) error
+
+// Setup installs the W3C propagator and, when an endpoint is configured, an OTLP
+// trace exporter + SDK TracerProvider. The returned Shutdown is always non-nil.
+func Setup(ctx context.Context, cfg Config) (Shutdown, error) {
+	// Always propagate W3C trace context + baggage, even with tracing off, so a
+	// later-enabled service still sees inbound context.
+	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(
+		propagation.TraceContext{},
+		propagation.Baggage{},
+	))
+
+	if cfg.OTLPEndpoint == "" {
+		return func(context.Context) error { return nil }, nil
+	}
+
+	res, err := resource.New(ctx, resource.WithAttributes(
+		// Literal semconv keys (avoids pinning a semconv module version).
+		attribute.String("service.name", cfg.ServiceName),
+		attribute.String("service.version", cfg.ServiceVersion),
+	))
+	if err != nil {
+		return nil, err
+	}
+
+	opts := []otlptracegrpc.Option{otlptracegrpc.WithEndpoint(cfg.OTLPEndpoint)}
+	if cfg.Insecure {
+		opts = append(opts, otlptracegrpc.WithInsecure())
+	}
+	exporter, err := otlptracegrpc.New(ctx, opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	tp := sdktrace.NewTracerProvider(
+		sdktrace.WithBatcher(exporter),
+		sdktrace.WithResource(res),
+	)
+	otel.SetTracerProvider(tp)
+	return tp.Shutdown, nil
+}
+
+// Tracer returns a named tracer from the global provider.
+func Tracer(name string) trace.Tracer { return otel.Tracer(name) }
+
+// InjectHeaders serializes the active trace context into a string map suitable
+// for attaching to a transport that has no native carrier — e.g. Kafka record
+// headers. Returns an empty map when there is no active context.
+func InjectHeaders(ctx context.Context) map[string]string {
+	carrier := propagation.MapCarrier{}
+	otel.GetTextMapPropagator().Inject(ctx, carrier)
+	return carrier
+}
+
+// ExtractContext returns ctx enriched with the trace context carried in headers
+// (the inverse of InjectHeaders). Unknown/empty headers leave ctx unchanged.
+func ExtractContext(ctx context.Context, headers map[string]string) context.Context {
+	return otel.GetTextMapPropagator().Extract(ctx, propagation.MapCarrier(headers))
+}
+
+// TraceID returns the active span's trace ID, or "" when there is none — the
+// bridge to logging.WithTraceID for correlating logs with traces.
+func TraceID(ctx context.Context) string {
+	if sc := trace.SpanContextFromContext(ctx); sc.HasTraceID() {
+		return sc.TraceID().String()
+	}
+	return ""
+}
