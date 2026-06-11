@@ -73,6 +73,24 @@ def test_evaluate_escalation_with_disabled_premium_is_503():
     assert resp.status_code == 503, "flag on without a real adapter must fail loudly"
 
 
+def test_evaluate_tolerates_null_gold_context():
+    # Go's encoding/json renders a nil slice as `null`; the edge must accept it
+    # as "no context" (regression: container E2E got a 422 here).
+    client = make_client()
+    resp = client.post(
+        "/v1/semantic/evaluate",
+        json={
+            "submission_id": "s-4",
+            "organization_id": "o-1",
+            "language": "go",
+            "masked_diff": "+x := 1",
+            "gold_context": None,
+        },
+    )
+    assert resp.status_code == 200
+    assert resp.json()["tier"] == "local"
+
+
 def test_evaluate_validation_errors():
     client = make_client()
     # pydantic rejects an empty diff at the edge

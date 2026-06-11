@@ -100,3 +100,8 @@ nothing from `app`/`adapters`; `app` depends only on `ports` (interfaces), never
 - Clients: `CGO_ENABLED=0 go build` → static binaries for `windows/macos/linux × amd64/arm64`, glibc+musl.
 - Services: multi-arch distroless OCI images (`linux/amd64`, `linux/arm64`).
 - No kernel/libc/init-system assumptions in client code; optional eBPF features degrade gracefully.
+- **Image build (D-029):** one parameterized `deploy/docker/Dockerfile.go` for every Go service
+  (multi-stage, BuildKit cache mounts, static binary on `distroless/static:nonroot`) +
+  `Dockerfile.semantic` (two-stage `python:3.12-slim`, wheels, non-root). `task build:images` tags
+  `membrane/<svc>:dev`; `task full-up` runs the all-container profile
+  (`deploy/compose/docker-compose.full.yml`: dual-listener Redpanda, one-shot migrate, all 6 services).

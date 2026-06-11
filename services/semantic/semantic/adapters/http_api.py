@@ -21,13 +21,17 @@ class GoldContextIn(BaseModel):
 
 
 class EvaluateRequest(BaseModel):
-    """Wire request for /v1/semantic/evaluate."""
+    """Wire request for /v1/semantic/evaluate.
+
+    gold_context tolerates an explicit JSON null (some producers serialize an
+    empty list that way) — be liberal in what we accept.
+    """
 
     submission_id: str = Field(min_length=1)
     organization_id: str = Field(min_length=1)
     language: str = ""
     masked_diff: str = Field(min_length=1)
-    gold_context: list[GoldContextIn] = Field(default_factory=list)
+    gold_context: list[GoldContextIn] | None = None
 
 
 class FindingOut(BaseModel):
@@ -73,7 +77,7 @@ def create_app(evaluate: EvaluateDiff) -> FastAPI:
                         code=g.code,
                         architectural_context=g.architectural_context,
                     )
-                    for g in req.gold_context
+                    for g in (req.gold_context or ())
                 ),
             )
         except ValueError as exc:

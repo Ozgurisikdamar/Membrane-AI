@@ -82,6 +82,19 @@ jobs:
             (cd "$m" && go test -race ./...)
           done
 
+  images:
+    name: container images build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Go service images
+        run: |
+          for s in analyzer ingestion orchestrator reporter resolver; do
+            docker build -f deploy/docker/Dockerfile.go --build-arg SERVICE=services/$s -t membrane/$s:ci .
+          done
+      - name: Build semantic image
+        run: docker build -f deploy/docker/Dockerfile.semantic -t membrane/semantic:ci .
+
   python:
     name: semantic service (ruff + mypy + pytest)
     runs-on: ubuntu-latest

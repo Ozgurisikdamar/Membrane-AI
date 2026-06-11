@@ -40,12 +40,14 @@ type ContextFetcher interface {
 }
 
 // evaluateRequest mirrors the semantic service's EvaluateRequest (D-023).
+// gold_context is omitempty: a nil slice must omit the field, not send
+// `"gold_context": null` — the semantic service validates it as a list.
 type evaluateRequest struct {
 	SubmissionID   string        `json:"submission_id"`
 	OrganizationID string        `json:"organization_id"`
 	Language       string        `json:"language"`
 	MaskedDiff     string        `json:"masked_diff"`
-	GoldContext    []GoldContext `json:"gold_context"`
+	GoldContext    []GoldContext `json:"gold_context,omitempty"`
 }
 
 // evaluateResponse mirrors the semantic service's EvaluateResponse.

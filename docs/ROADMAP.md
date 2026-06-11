@@ -79,7 +79,11 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done.
 - [ ] **SCM integration** (GitHub/GitLab) end-to-end
 - [ ] **Shadow-mode → enforcement** merge gates
 - [ ] **Observability & SRE** (OpenTelemetry, SLOs, dashboards)
-- [ ] **Deployment**: SaaS / VPC / air-gapped — Terraform + Helm; multi-arch images; static client packaging
+- [~] **Deployment**: SaaS / VPC / air-gapped — Terraform + Helm; multi-arch images; static client packaging
+      - [x] **Container images (D-029)**: parameterized distroless Dockerfile for all Go services +
+            python-slim semantic; `task build:images`; `docker-compose.full.yml` all-container profile
+            (`task full-up`) with dual-listener Redpanda + one-shot migrate; CI `images` job
+      - [ ] Helm chart (next deployment step) · Terraform · multi-arch (buildx) publish
 - [ ] **Compliance prep** (SOC 2 / ISO 27001 / 42001), docs & landing site
 
 > The 20 GitHub board items map onto these phases; when you finish one, set its board card to Done and

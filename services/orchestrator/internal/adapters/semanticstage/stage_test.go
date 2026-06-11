@@ -101,8 +101,16 @@ func TestAnalyze_NonUUIDOrgSkipsRAG(t *testing.T) {
 	if fetcher.called {
 		t.Fatal("fetcher must be skipped for non-UUID orgs (gold index is UUID-keyed)")
 	}
-	if gc, ok := (*captured)["gold_context"].([]any); ok && len(gc) != 0 {
-		t.Fatalf("gold context should be empty: %v", gc)
+	// Without RAG the field must be ABSENT — `"gold_context": null` fails the
+	// semantic service's list validation (caught live in the container E2E).
+	if v, exists := (*captured)["gold_context"]; exists {
+		gc, isArr := v.([]any)
+		if !isArr {
+			t.Fatalf("gold_context must be omitted or an array, got %v", v)
+		}
+		if len(gc) != 0 {
+			t.Fatalf("gold context should be empty: %v", gc)
+		}
 	}
 }
 

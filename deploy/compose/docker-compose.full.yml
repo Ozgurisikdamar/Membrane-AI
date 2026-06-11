@@ -53,6 +53,22 @@ services:
       timeout: 5s
       retries: 10
 
+  # One-shot topic creation (explicit, not auto-create: partitions/replication
+  # are deliberate). Safe to re-run — an existing topic passes the describe check.
+  topics:
+    image: redpandadata/redpanda:v24.3.1
+    depends_on:
+      redpanda:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "-ce"]
+    command:
+      - |
+        for t in code.submission.v1 code.verdict.v1; do
+          rpk topic create "$$t" -p 1 -r 1 -X brokers=redpanda:9092 \
+            || rpk topic describe "$$t" -X brokers=redpanda:9092 >/dev/null
+        done
+    restart: "no"
+
   # One-shot migration runner (pre-1.0 policy D-022: 0001 evolves in place,
   # recreate the volume on schema changes: `docker compose ... down -v`).
   migrate:
@@ -74,6 +90,8 @@ services:
     depends_on:
       redpanda:
         condition: service_healthy
+      topics:
+        condition: service_completed_successfully
     environment:
       MEMBRANE_INGESTION_KAFKA_BROKERS: redpanda:9092
       MEMBRANE_INGESTION_WEBHOOK_SECRET: ${MEMBRANE_INGESTION_WEBHOOK_SECRET:-}
@@ -112,6 +130,8 @@ services:
     depends_on:
       redpanda:
         condition: service_healthy
+      topics:
+        condition: service_completed_successfully
       redis:
         condition: service_healthy
       migrate:
@@ -137,6 +157,8 @@ services:
     depends_on:
       redpanda:
         condition: service_healthy
+      topics:
+        condition: service_completed_successfully
     environment:
       MEMBRANE_REPORTER_KAFKA_BROKERS: redpanda:9092
       MEMBRANE_REPORTER_WEBHOOK_URL: ${MEMBRANE_REPORTER_WEBHOOK_URL:-}

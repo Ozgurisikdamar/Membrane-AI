@@ -44,6 +44,8 @@ re-run its install line and re-open the shell.
 | `task dev-down` | Tear the dev stack down. |
 | `task run:<svc>` | Run a service locally (e.g. `task run:ingestion`, `task run:semantic`). |
 | `task build:cli` | Build the static Code Sweeper binary into `bin/membrane(.exe)`. |
+| `task build:images` | Build all 6 container images `membrane/<svc>:dev` (distroless Go + python-slim semantic). |
+| `task full-up` / `task full-down` | All-container profile: infra + every service from local images (`docker-compose.full.yml`). |
 | `task setup:py` | One-time: create the semantic venv + install dev deps. |
 | `task lint:py` / `task test:py` | ruff + mypy --strict / pytest on the semantic service. |
 | `task ci` | What CI runs: proto + lint + test + build + Python gates. Run this before "pushla". |
