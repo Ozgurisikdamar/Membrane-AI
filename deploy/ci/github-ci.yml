@@ -95,6 +95,20 @@ jobs:
       - name: Build semantic image
         run: docker build -f deploy/docker/Dockerfile.semantic -t membrane/semantic:ci .
 
+  helm:
+    name: helm chart (lint + render + schema)
+    runs-on: ubuntu-latest # helm is preinstalled on the runner
+    steps:
+      - uses: actions/checkout@v4
+      - name: helm lint
+        run: helm lint deploy/helm/membrane
+      - name: helm template + kubeconform
+        run: |
+          go install github.com/yannh/kubeconform/cmd/kubeconform@latest
+          helm template smoke deploy/helm/membrane \
+            --set credentials.databaseUrl=x --set provisioning.topics.enabled=true \
+            | $(go env GOPATH)/bin/kubeconform -strict -summary
+
   python:
     name: semantic service (ruff + mypy + pytest)
     runs-on: ubuntu-latest

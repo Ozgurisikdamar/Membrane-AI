@@ -110,6 +110,14 @@ tasks:
     cmds:
       - docker compose -f deploy/compose/docker-compose.full.yml down -v
 
+  helm:lint:
+    desc: Lint and render the Helm chart (requires helm; schema check if kubeconform present)
+    cmds:
+      - helm lint deploy/helm/membrane
+      - helm template smoke deploy/helm/membrane --set credentials.databaseUrl=x --set provisioning.topics.enabled=true > /dev/null
+      - cmd: helm template smoke deploy/helm/membrane --set credentials.databaseUrl=x --set provisioning.topics.enabled=true | kubeconform -strict -summary
+        ignore_error: true # kubeconform is optional tooling
+
   ci:
     desc: Full local CI gate (run before "pushla")
     cmds:

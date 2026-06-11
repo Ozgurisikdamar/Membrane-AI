@@ -1,0 +1,35 @@
+{{- /*
+A ClusterIP Service per service that exposes ports (orchestrator and reporter
+are pure consumers — no Service object). The health port is exposed too, so
+in-cluster monitoring can scrape /readyz without a sidecar.
+*/ -}}
+{{- $root := . -}}
+{{- range $svcName, $svc := .Values.services }}
+{{- if and $svc.enabled $svc.ports }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "membrane.svcFullname" (dict "root" $root "svcName" $svcName) }}
+  labels:
+    {{- include "membrane.labels" $root | nindent 4 }}
+    app.kubernetes.io/component: {{ $svcName }}
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "membrane.selectorLabels" (dict "root" $root "svcName" $svcName) | nindent 4 }}
+  {{- $healthExposed := false }}
+  {{- range $svc.ports }}{{- if eq (int .port) (int $svc.healthPort) }}{{- $healthExposed = true }}{{- end }}{{- end }}
+  ports:
+    {{- range $svc.ports }}
+    - name: {{ .name }}
+      port: {{ .port }}
+      targetPort: {{ .port }}
+    {{- end }}
+    {{- if not $healthExposed }}
+    - name: health
+      port: {{ $svc.healthPort }}
+      targetPort: {{ $svc.healthPort }}
+    {{- end }}
+{{- end }}
+{{- end }}

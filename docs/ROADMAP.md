@@ -86,7 +86,10 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done.
       - [x] **Container images (D-029)**: parameterized distroless Dockerfile for all Go services +
             python-slim semantic; `task build:images`; `docker-compose.full.yml` all-container profile
             (`task full-up`) with dual-listener Redpanda + one-shot migrate; CI `images` job
-      - [ ] Helm chart (next deployment step) · Terraform · multi-arch (buildx) publish
+      - [x] **Helm chart (D-030)**: `deploy/helm/membrane` — generic template loop over the six
+            services, external infra endpoints, optional Secret + topics hook, non-root/read-only
+            pods; `task helm:lint` (helm lint + template + kubeconform), CI `helm` job
+      - [ ] Terraform · multi-arch (buildx) publish
 - [ ] **Compliance prep** (SOC 2 / ISO 27001 / 42001), docs & landing site
 
 > The 20 GitHub board items map onto these phases; when you finish one, set its board card to Done and

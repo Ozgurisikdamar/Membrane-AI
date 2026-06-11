@@ -1,0 +1,105 @@
+{{- /*
+One Deployment per enabled service — the six services share one shape
+(distroless/non-root image, env-only config, /livez + /readyz on a health
+port), so a single template renders them all (D-030).
+*/ -}}
+{{- $root := . -}}
+{{- range $svcName, $svc := .Values.services }}
+{{- if $svc.enabled }}
+{{- $svcFullname := include "membrane.svcFullname" (dict "root" $root "svcName" $svcName) }}
+{{- $healthExposed := false }}
+{{- range $svc.ports }}{{- if eq (int .port) (int $svc.healthPort) }}{{- $healthExposed = true }}{{- end }}{{- end }}
+{{- $resources := mergeOverwrite (deepCopy $root.Values.common.resources) (default dict $svc.resources) }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $svcFullname }}
+  labels:
+    {{- include "membrane.labels" $root | nindent 4 }}
+    app.kubernetes.io/component: {{ $svcName }}
+spec:
+  replicas: {{ $svc.replicas }}
+  selector:
+    matchLabels:
+      {{- include "membrane.selectorLabels" (dict "root" $root "svcName" $svcName) | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "membrane.selectorLabels" (dict "root" $root "svcName" $svcName) | nindent 8 }}
+    spec:
+      # No service talks to the Kubernetes API — keep the token out of the
+      # blast radius of a compromised webhook/HTTP endpoint.
+      automountServiceAccountToken: false
+      {{- with $root.Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: {{ $svc.runAsUser }}
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: {{ $svcName }}
+          image: {{ include "membrane.image" (dict "root" $root "svcName" $svcName) }}
+          imagePullPolicy: {{ $root.Values.image.pullPolicy }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          ports:
+            {{- range $svc.ports }}
+            - name: {{ .name }}
+              containerPort: {{ .port }}
+            {{- end }}
+            {{- if not $healthExposed }}
+            - name: health
+              containerPort: {{ $svc.healthPort }}
+            {{- end }}
+          env:
+            {{- /* Bind addresses derive from the SAME values as the ports and
+                   probes, so a port override reaches the listener too. */ -}}
+            {{- range $svc.ports }}
+            {{- if .addrEnv }}
+            - name: {{ .addrEnv }}
+              value: ":{{ .port }}"
+            {{- end }}
+            {{- end }}
+            {{- if $svc.healthEnv }}
+            - name: {{ $svc.healthEnv }}
+              value: ":{{ $svc.healthPort }}"
+            {{- end }}
+            {{- if $svc.portEnv }}
+            - name: {{ $svc.portEnv }}
+              value: "{{ $svc.healthPort }}"
+            {{- end }}
+            {{- range $name, $value := $svc.env }}
+            - name: {{ $name }}
+              value: {{ tpl (toString $value) $root | quote }}
+            {{- end }}
+            {{- range $name, $key := $svc.secretEnv }}
+            - name: {{ $name }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "membrane.fullname" $root }}-credentials
+                  key: {{ $key }}
+                  optional: {{ not (has $key $root.Values.requiredCredentials) }}
+            {{- end }}
+          livenessProbe:
+            httpGet:
+              path: /livez
+              port: {{ $svc.healthPort }}
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: {{ $svc.healthPort }}
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            {{- toYaml $resources | nindent 12 }}
+{{- end }}
+{{- end }}

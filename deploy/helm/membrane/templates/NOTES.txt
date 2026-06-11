@@ -1,0 +1,29 @@
+MEMBRANE.AI {{ .Chart.AppVersion }} deployed as release {{ .Release.Name }}.
+
+In-cluster endpoints (ClusterIP):
+  ingestion   gRPC  {{ include "membrane.fullname" . }}-ingestion:9001
+  ingestion   HTTP  {{ include "membrane.fullname" . }}-ingestion:8001   (POST /webhook)
+  analyzer    gRPC  {{ include "membrane.fullname" . }}-analyzer:9003
+  resolver    gRPC  {{ include "membrane.fullname" . }}-resolver:9004
+  semantic    HTTP  {{ include "membrane.fullname" . }}-semantic:8005    (POST /v1/semantic/evaluate)
+
+Readiness: every pod serves /readyz on its health port (orchestrator and
+reporter have no Service object — they are Kafka consumers; check their pods).
+
+Required wiring you may still need to provide:
+  - infra.kafkaBrokers / infra.redisAddr        (defaults assume in-cluster names)
+  - credentials.databaseUrl                     (REQUIRED: orchestrator + resolver fail to start
+                                                 without it — secretKeyRef is non-optional)
+  - credentials.webhookSecret                   (see the security warning below)
+  - credentials.githubToken / webhookUrl        (reporter notifiers; optional)
+  - infra.vllmUrl                               (tier-2 LLM; empty = heuristic-only, D-028)
+  - provisioning.topics.enabled=true            (only for self-contained dev clusters)
+
+⚠️  SECURITY — ingestion webhook authentication:
+  An empty credentials.webhookSecret DISABLES HMAC signature verification: the
+  /webhook endpoint (port 8001) then accepts any unsigned POST into the pipeline.
+  For any non-isolated cluster, set credentials.webhookSecret AND/OR restrict
+  who can reach the ingestion Service (NetworkPolicy / mesh authz).
+
+Schema: apply deploy/migrations/*.up.sql to the database before first use
+(pre-1.0 policy D-022 — migrations evolve in place, no in-chart migration job).

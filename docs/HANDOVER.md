@@ -3,7 +3,7 @@
 > **On "devam et": read this file, then do "Next up". Update this file before the session ends.**
 > Keep it short and current — this is state, not history.
 
-_Last updated: 2026-06-11 — session: P3 part 4 (Code Sweeper Technical-Debt Report mode)._
+_Last updated: 2026-06-11 — session: P3 part 5 (Helm chart, D-030)._
 
 ## Push policy
 
@@ -20,7 +20,20 @@ The user pushes manually (`git push` in their own terminal). Check pending:
 
 ## Current state
 
-**P0 ✓ P1 ✓ P2 ✓ — P3 in flight.** `task ci` green: 8 Go modules + Python (24 pytest).
+**P0 ✓ P1 ✓ P2 ✓ — P3 in flight.** `task ci` green: 8 Go modules + Python (24 pytest);
+`task helm:lint` green (helm lint + template + kubeconform 12/12).
+
+- **Helm chart done (D-030)**: `deploy/helm/membrane` — one generic Deployment/Service template
+  loops over `.Values.services` (6 services); infra (Kafka/Redis/Postgres/vLLM) as external
+  endpoints; one optional Secret; opt-in topics hook Job; pods non-root + read-only rootfs +
+  `automountServiceAccountToken: false`. `task helm:lint`; CI `helm` job added.
+- **Hardened by the chart's multi-agent review** (all confirmed findings fixed): port overrides
+  now drive the listener bind env (`addrEnv`/`healthEnv`/`portEnv`), not just the probe; `tpl`/
+  image-tag use `toString` (numeric `--set` no longer crashes/garbles); `fullname` truncates to 50
+  so per-service suffixes stay distinct ≤63; topics Job is injection-safe (values via env, no
+  `tpl` on brokers) and PSA-restricted-clean; `databaseUrl` secretKeyRef is non-optional
+  (fail-fast, not a silent localhost fallback); vLLM + reporter webhook-URL/GHE-API now surfaced;
+  webhook fail-open documented in NOTES.
 
 - **Technical-Debt Report mode done** (the GTM lead magnet): `membrane scan --report md|html
   [--out file]` → `clients/cli/internal/report`. Aggregates by rule/dir/file, severity-weighted
@@ -53,16 +66,15 @@ The user pushes manually (`git push` in their own terminal). Check pending:
 
 ## Next up  (P3 continuation; see docs/ROADMAP.md)
 
-1. **Helm chart** (deploy/helm): unblocked by D-029 images; values per service, infra as
-   dependencies or external endpoints.
-2. **Premium tier-3 consensus adapter** (Claude Sonnet 4.6 + Gemini): needs an API-key handling
-   decision (env vs file vs vault) — record as **D-030** when built; until then the flag stays off.
-3. **CLI packaging matrix** (winget/brew/deb/rpm/tarball) or **accuracy/eval harness** — pick per
+1. **Premium tier-3 consensus adapter** (Claude Sonnet 4.6 + Gemini): needs an API-key handling
+   decision (env vs file vs vault) — record as **D-031** when built; until then the flag stays off.
+2. **CLI packaging matrix** (winget/brew/deb/rpm/tarball) or **accuracy/eval harness** — pick per
    GTM priority.
+3. **Observability** (OpenTelemetry traces/metrics across services) — the SRE story.
 
 ## How to verify
 
-- `task ci` → all green.
+- `task ci` → all green. `task helm:lint` → helm lint + render + kubeconform green.
 - Report mode: `task build:cli` then `bin/membrane scan . --report html --out debt.html
   --fail-on=never` (repo self-scan ≈ 34 findings, all from test fixtures — a good demo). Story
   lives in `clients/cli/internal/report/report_test.go` + `cmd/membrane/main_test.go`.

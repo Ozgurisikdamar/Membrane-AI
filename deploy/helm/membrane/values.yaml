@@ -1,0 +1,172 @@
+# MEMBRANE.AI chart values.
+#
+# Infra (Kafka / Redis / Postgres / vLLM) is consumed as EXTERNAL endpoints
+# (D-030): point the values below at your managed services or in-cluster
+# operators. The defaults assume conventional in-cluster service names so
+# `helm template` renders out of the box — override them for any real deploy.
+#
+# Service env values render through `tpl`, so they may reference other values
+# ({{ .Values.infra.kafkaBrokers }}) or helpers. Override a service's `env`
+# map with `--set-string` (NOT `--set`) so numeric/boolean values stay strings.
+
+image:
+  # Registry/namespace prefix for the six images, WITHOUT trailing slash.
+  # Empty = bare local names (membrane/<svc>), as produced by `task build:images`.
+  registry: ""
+  tag: dev
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+
+infra:
+  kafkaBrokers: "kafka:9092"
+  redisAddr: "redis:6379"
+  # Tier-2 vLLM endpoint (OpenAI-compatible). Empty = heuristic-only (D-028).
+  vllmUrl: ""
+  vllmModel: "deepseek-coder"
+  # GitHub API base URL for the reporter (only for GitHub Enterprise).
+  githubApiUrl: ""
+
+# Sensitive values land in one Secret; only non-empty keys are rendered, and
+# with no credentials at all the Secret is omitted. databaseUrl is treated as
+# REQUIRED by orchestrator/resolver: its secretKeyRef is non-optional, so a
+# missing value fails the pod fast with a named error instead of silently
+# falling back to a localhost DSN (see requiredCredentials below).
+credentials:
+  # postgres://user:pass@host:5432/membrane — required by orchestrator + resolver.
+  databaseUrl: ""
+  # HMAC secret for the ingestion Git webhook.
+  # ⚠️ EMPTY DISABLES SIGNATURE VERIFICATION — the webhook then accepts any
+  # unsigned POST. Set this (and/or restrict ingress to :8001) in production.
+  webhookSecret: ""
+  # GitHub token for the reporter's commit-status + PR-comment notifiers.
+  githubToken: ""
+  # Slack-compatible webhook URL for the reporter (secret-bearing: embeds a token).
+  webhookUrl: ""
+
+# Credential keys whose secretKeyRef must be non-optional (fail-fast when the
+# owning service is enabled but the value is missing).
+requiredCredentials:
+  - databaseUrl
+
+# One-shot Kafka topic provisioning (pre-install/pre-upgrade hook). Off by
+# default: production topics are usually owned by platform/IaC. Enable for
+# self-contained dev clusters.
+provisioning:
+  topics:
+    enabled: false
+    image: redpandadata/redpanda:v24.3.1
+    topics:
+      - code.submission.v1
+      - code.verdict.v1
+    partitions: 1
+    replicationFactor: 1
+
+# Pod-level defaults applied to every service (override per service if needed).
+common:
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      memory: 256Mi
+
+# Each service: replicas, the image's real non-root UID, listening ports (each
+# with the env var the app binds it from, so a port override reaches BOTH the
+# probe and the listener), the health port (+ its bind env), and env/secretEnv.
+services:
+  ingestion:
+    enabled: true
+    replicas: 1
+    runAsUser: 65532 # distroless nonroot
+    ports:
+      - name: grpc
+        port: 9001
+        addrEnv: MEMBRANE_INGESTION_GRPC_ADDR
+      - name: http
+        port: 8001
+        addrEnv: MEMBRANE_INGESTION_HTTP_ADDR
+    healthPort: 8101
+    healthEnv: MEMBRANE_INGESTION_HEALTH_ADDR
+    env:
+      MEMBRANE_INGESTION_KAFKA_BROKERS: "{{ .Values.infra.kafkaBrokers }}"
+    secretEnv:
+      MEMBRANE_INGESTION_WEBHOOK_SECRET: webhookSecret
+
+  orchestrator:
+    enabled: true
+    replicas: 1
+    runAsUser: 65532
+    ports: []
+    healthPort: 8102
+    healthEnv: MEMBRANE_ORCHESTRATOR_HEALTH_ADDR
+    env:
+      MEMBRANE_ORCHESTRATOR_KAFKA_BROKERS: "{{ .Values.infra.kafkaBrokers }}"
+      MEMBRANE_ORCHESTRATOR_REDIS_ADDR: "{{ .Values.infra.redisAddr }}"
+      MEMBRANE_ORCHESTRATOR_ANALYZER_ADDR: '{{ include "membrane.svcFullname" (dict "root" . "svcName" "analyzer") }}:9003'
+      MEMBRANE_ORCHESTRATOR_SEMANTIC_URL: 'http://{{ include "membrane.svcFullname" (dict "root" . "svcName" "semantic") }}:8005'
+      MEMBRANE_ORCHESTRATOR_RESOLVER_ADDR: '{{ include "membrane.svcFullname" (dict "root" . "svcName" "resolver") }}:9004'
+    secretEnv:
+      MEMBRANE_ORCHESTRATOR_DATABASE_URL: databaseUrl
+
+  analyzer:
+    enabled: true
+    replicas: 1
+    runAsUser: 65532
+    ports:
+      - name: grpc
+        port: 9003
+        addrEnv: MEMBRANE_ANALYZER_GRPC_ADDR
+    healthPort: 8103
+    healthEnv: MEMBRANE_ANALYZER_HEALTH_ADDR
+    env: {}
+    secretEnv: {}
+
+  resolver:
+    enabled: true
+    replicas: 1
+    runAsUser: 65532
+    ports:
+      - name: grpc
+        port: 9004
+        addrEnv: MEMBRANE_RESOLVER_GRPC_ADDR
+    healthPort: 8104
+    healthEnv: MEMBRANE_RESOLVER_HEALTH_ADDR
+    env: {}
+    secretEnv:
+      MEMBRANE_RESOLVER_DATABASE_URL: databaseUrl
+
+  reporter:
+    enabled: true
+    replicas: 1
+    runAsUser: 65532
+    ports: []
+    healthPort: 8105
+    healthEnv: MEMBRANE_REPORTER_HEALTH_ADDR
+    env:
+      MEMBRANE_REPORTER_KAFKA_BROKERS: "{{ .Values.infra.kafkaBrokers }}"
+      MEMBRANE_REPORTER_GITHUB_API_URL: "{{ .Values.infra.githubApiUrl }}"
+    secretEnv:
+      MEMBRANE_REPORTER_GITHUB_TOKEN: githubToken
+      MEMBRANE_REPORTER_WEBHOOK_URL: webhookUrl
+
+  semantic:
+    enabled: true
+    replicas: 1
+    runAsUser: 10001 # the dedicated user baked into Dockerfile.semantic
+    ports:
+      - name: http
+        port: 8005
+    # D-023: semantic serves health on its main HTTP port; it binds an int PORT.
+    healthPort: 8005
+    portEnv: MEMBRANE_SEMANTIC_PORT
+    env:
+      MEMBRANE_SEMANTIC_VLLM_URL: "{{ .Values.infra.vllmUrl }}"
+      MEMBRANE_SEMANTIC_VLLM_MODEL: "{{ .Values.infra.vllmModel }}"
+    secretEnv: {}
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        memory: 512Mi

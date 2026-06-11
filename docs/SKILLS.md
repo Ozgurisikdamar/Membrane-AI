@@ -47,6 +47,7 @@ re-run its install line and re-open the shell.
 | `membrane scan [path]` | Offline scan. `--json` machine output; `--report md\|html [--out file]` = Generative-AI Technical-Debt Report (rule/dir/file aggregates + A–F grade); `--fail-on=blocking\|warning\|never` drives the exit code. |
 | `task build:images` | Build all 6 container images `membrane/<svc>:dev` (distroless Go + python-slim semantic). |
 | `task full-up` / `task full-down` | All-container profile: infra + every service from local images (`docker-compose.full.yml`). |
+| `task helm:lint` | Lint + render + schema-check the Helm chart (`deploy/helm/membrane`, D-030). |
 | `task setup:py` | One-time: create the semantic venv + install dev deps. |
 | `task lint:py` / `task test:py` | ruff + mypy --strict / pytest on the semantic service. |
 | `task ci` | What CI runs: proto + lint + test + build + Python gates. Run this before "pushla". |

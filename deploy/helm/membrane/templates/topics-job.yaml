@@ -1,0 +1,63 @@
+{{- /*
+Optional one-shot Kafka topic provisioning (mirrors the compose `topics`
+init container). Off by default — production topics are usually owned by
+platform IaC. The hook re-runs on upgrades; existing topics pass the
+describe fallback, so it stays idempotent.
+
+SECURITY: topic names and the broker string are passed as ENV VALUES, not
+interpolated into the script source, so a value like `$(...)` stays literal
+data the shell never executes. The broker string is NOT tpl'd — that would
+turn an operator config string into a template-injection sink with full
+access to .Values (incl. credentials).
+*/ -}}
+{{- if .Values.provisioning.topics.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "membrane.fullname" . }}-topics
+  labels:
+    {{- include "membrane.labels" . | nindent 4 }}
+    app.kubernetes.io/component: topics
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        {{- include "membrane.selectorLabels" (dict "root" . "svcName" "topics") | nindent 8 }}
+    spec:
+      restartPolicy: Never
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534 # nobody — rpk needs nothing privileged
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: topics
+          image: {{ .Values.provisioning.topics.image }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          env:
+            - name: BROKERS
+              value: {{ .Values.infra.kafkaBrokers | toString | quote }}
+            - name: TOPICS
+              value: {{ join " " .Values.provisioning.topics.topics | quote }}
+          command: ["/bin/sh", "-ce"]
+          args:
+            - |
+              for t in $TOPICS; do
+                rpk topic create "$t" \
+                  -p {{ int .Values.provisioning.topics.partitions }} \
+                  -r {{ int .Values.provisioning.topics.replicationFactor }} \
+                  -X brokers="$BROKERS" \
+                  || rpk topic describe "$t" -X brokers="$BROKERS" >/dev/null
+              done
+          resources:
+            {{- toYaml .Values.common.resources | nindent 12 }}
+{{- end }}
