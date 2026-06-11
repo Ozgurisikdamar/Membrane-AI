@@ -1,0 +1,105 @@
+# GitHub Actions CI for MEMBRANE.AI.
+#
+# NOTE (D-026): this file is tracked here — NOT under .github/workflows/ —
+# because the push token deliberately lacks the 'workflow' scope. To enable CI,
+# copy this file once to .github/workflows/ci.yml via the GitHub web UI
+# (Add file → paste → commit); afterwards keep this copy as the source of truth
+# and mirror any edits the same way.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+env:
+  GOWORK: "off" # use in-repo replace directives, not any external workspace
+
+jobs:
+  build-test:
+    name: build & test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+      - name: Install go-task
+        run: go install github.com/go-task/task/v3/cmd/task@latest
+      - name: Test
+        run: task test
+      - name: Build
+        run: task build
+
+  lint:
+    name: lint (buf + golangci-lint)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+      - uses: bufbuild/buf-setup-action@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Install go-task & golangci-lint
+        run: |
+          go install github.com/go-task/task/v3/cmd/task@latest
+          go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest
+      - name: buf lint
+        working-directory: proto
+        run: buf lint
+      - name: buf breaking (against main)
+        if: github.event_name == 'pull_request'
+        working-directory: proto
+        run: buf breaking --against 'https://github.com/${{ github.repository }}.git#branch=main,subdir=proto'
+      - name: golangci-lint
+        run: task lint
+
+  race:
+    name: race detector (linux)
+    runs-on: ubuntu-latest
+    env:
+      GOWORK: "off"
+      CGO_ENABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+      - name: Test with race detector
+        run: |
+          for m in pkg proto services/analyzer services/ingestion services/orchestrator services/reporter services/resolver; do
+            (cd "$m" && go test -race ./...)
+          done
+
+  python:
+    name: semantic service (ruff + mypy + pytest)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/semantic
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: pip install --quiet -e ".[dev]"
+      - name: ruff
+        run: |
+          ruff check .
+          ruff format --check .
+      - name: mypy (strict)
+        run: mypy semantic
+      - name: pytest
+        run: pytest

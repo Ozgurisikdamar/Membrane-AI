@@ -42,3 +42,9 @@ Thumbs.db
 
 # Python packaging metadata
 *.egg-info/
+
+# GitHub workflow files are NOT tracked: the push token deliberately lacks the
+# 'workflow' scope (D-026). The live copy under .github/ is local-only; the
+# tracked source of truth is deploy/ci/github-ci.yml — enable it once via the
+# GitHub web UI (Add file -> .github/workflows/ci.yml).
+.github/
