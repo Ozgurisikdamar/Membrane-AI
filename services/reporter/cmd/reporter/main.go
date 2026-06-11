@@ -45,8 +45,11 @@ func run(log *slog.Logger) error {
 		log.Info("webhook notifier enabled")
 	}
 	if cfg.GitHubToken != "" {
-		notifiers = append(notifiers, notify.NewGitHubStatus(cfg.GitHubAPIURL, cfg.GitHubToken))
-		log.Info("github commit-status notifier enabled")
+		notifiers = append(notifiers,
+			notify.NewGitHubStatus(cfg.GitHubAPIURL, cfg.GitHubToken),
+			notify.NewGitHubPRComment(cfg.GitHubAPIURL, cfg.GitHubToken),
+		)
+		log.Info("github notifiers enabled (commit status + PR comment)")
 	}
 	dispatch := app.NewDispatchVerdict(memorylog.New(), notifiers...)
 
