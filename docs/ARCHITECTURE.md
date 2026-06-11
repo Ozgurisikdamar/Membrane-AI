@@ -24,7 +24,7 @@ pipeline in sub-millisecond time.
 | `services/analyzer` | Go | Deterministic static analysis (gRPC `membrane.analyzer.v1`): secret detection + masking, risky-pattern rules; AST detectors land with resolver-provided full files (D-019). |
 | `services/resolver` | Go | Repo metadata + gold-codebase vector queries (pgvector HNSW). |
 | `services/semantic` | Python/FastAPI | `POST /v1/semantic/evaluate` (HTTP+JSON, D-023): tier-2 local model + tier-3 premium consensus behind the cost gate (D-008); receives masked diffs + resolver gold context. |
-| `services/reporter` | Go | Verdicts → IDE inline fixes, PR status/comments, Slack/Jira/SIEM; writes audit. |
+| `services/reporter` | Go | Consumes `code.verdict.v1` → idempotent notifications (Slack-compatible webhook + logs today; GitHub commit-status when `commit_sha` lands, D-025). Health `:8105`. |
 | `pkg/*` | Go | Shared foundation: `config`, `logging`, `errs`, `health`, `kafka`. |
 
 ## 3. Event & data flow

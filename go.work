@@ -6,5 +6,6 @@ use (
 	./services/analyzer
 	./services/ingestion
 	./services/orchestrator
+	./services/reporter
 	./services/resolver
 )

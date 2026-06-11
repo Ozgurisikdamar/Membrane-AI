@@ -3,60 +3,55 @@
 > **On "devam et": read this file, then do "Next up". Update this file before the session ends.**
 > Keep it short and current — this is state, not history.
 
-_Last updated: 2026-06-11 — session: P2 part 2 (semantic stage + RAG in the Saga, D-024)._
+_Last updated: 2026-06-11 — session: P2 part 3 (5-service E2E proven + reporter service)._
 
 ## ⚠️ Push is STILL blocked on a token scope
 
-The classic PAT lacks the **`workflow`** scope (commits touch `.github/workflows/ci.yml`). Fix: user
-edits the token at https://github.com/settings/tokens → check **workflow** → Update token. Then
-`git -C C:\Dev\Membrane-AI push origin main` ships the **~11 pending commits**, and the first GitHub
-Actions run should be checked (`gh run list`).
+The classic PAT lacks the **`workflow`** scope. Fix: https://github.com/settings/tokens → the token →
+check **workflow** → Update token. Then `git -C C:\Dev\Membrane-AI push origin main` ships the
+**~11 pending commits**; afterwards check the first GitHub Actions run (`gh run list`).
 
 ## Current state
 
-**P0 ✓, P1 ✓, P2 well underway.** `task ci` green (6 Go modules + Python gates).
+**P0 ✓, P1 ✓, P2 nearly done.** `task ci` green: **7 Go modules** + Python gates.
 
-- **D-024 implemented** — the Saga's stage chain now threads artifacts:
-  - `ports.AnalysisStage` returns `StageResult{Findings, MaskedDiff}`; a non-empty MaskedDiff rewrites
-    the diff for all later stages → **the semantic/LLM tier only ever sees the analyzer-masked diff**
-    (unit-proven: `TestHandle_MaskedDiffFlowsToLaterStages`, httptest capture of `masked_diff`).
-  - Cache key still derives from the ORIGINAL diff.
-  - **`app.Optional` decorator**: advisory-stage errors → `stage-unavailable` warning finding, never
-    the fallback (required-stage findings survive).
-- **`semanticstage` adapter**: HTTP client for `POST /v1/semantic/evaluate` (Saga ctx deadline,
-  4 MiB response cap, unknown severity → warning) + **`ResolverFetcher`** (gRPC) injecting top-3 gold
-  context, best-effort (nil fetcher / non-UUID org / fetch error ⇒ no context, stage still runs).
-- Wiring: `MEMBRANE_ORCHESTRATOR_SEMANTIC_URL` (empty = stage off) + `…_RESOLVER_ADDR` (empty = no
-  RAG). Stage chain in Kafka mode: `[analyzer, Optional(semantic)]`, fallback = secret-scan.
-- Coverage: orchestrator app 98%, semanticstage 64% (ResolverFetcher is E2E-covered glue), stages 100%.
-- **Docker engine would not start this session** → the 5-service E2E re-run is pending (item 1 below).
-- Commits local on `main` (**11 ahead**), push gated on the token fix.
+- **THE FULL PRODUCT LOOP IS E2E-PROVEN over real infra** (Docker dev stack):
+  `webhook → ingestion → Kafka → orchestrator [cache→analyzer→Optional(semantic+RAG)] → outbox relay
+  → Kafka → reporter → webhook notification`. Highlights:
+  - 5-service E2E: verdict `rejected` with `[analyzer] aws-access-key-id (blocking)` **plus**
+    `[semantic] local-heuristic:masked` — proof the LLM tier received the MASKED diff (D-024 works).
+  - Reporter E2E: consumed real verdicts off the topic, delivered Slack-compatible webhook payloads
+    (`MEMBRANE.AI ✗ rejected — N finding(s)…`) + structured logs; `verdict_audit` rows in Postgres.
+- **`services/reporter`** (hexagonal, health `:8105`, group `membrane-reporter`): domain report
+  rendering (decision→outcome mapping, 10-finding cap), `DispatchVerdict` with **per-(submission,
+  notifier) idempotent delivery** (failed destinations retry on redelivery, successful ones never
+  re-fire), webhook + log notifiers, in-memory delivery log (D-025; Redis later).
+- Dev stack left running. Binaries in `%TEMP%\membrane_build\` (analyzer/resolver/orchestrator/
+  ingestion/reporter.exe + semantic venv).
 
-## Next up  (see docs/ROADMAP.md)
+## Next up  (P2 wrap → P3; see docs/ROADMAP.md)
 
-1. **5-service E2E** (first session with Docker up): `task dev-up && task migrate`; create topics; run
-   analyzer + resolver + semantic (`task run:semantic`) + orchestrator with
-   `MEMBRANE_ORCHESTRATOR_ANALYZER_ADDR=localhost:9003`, `…_SEMANTIC_URL=http://localhost:8005`,
-   `…_RESOLVER_ADDR=localhost:9004` + ingestion. POST a webhook diff containing an AWS key AND
-   "auth"/"crypto" words, **org = a UUID**. Expect verdict `rejected` with findings from BOTH stages —
-   crucially `semantic / local-heuristic:masked` proves the masked diff reached the LLM tier.
-   Also verify `verdict_audit` + `outbox.published=true`.
-2. **Reporter service** (`services/reporter`, Go): consume `code.verdict.v1`, post PR status/comments
-   (GitHub Commit Status API), Slack webhook port; hexagonal; idempotent by submission_id.
-3. Or (user's priority): real tier-2 vLLM adapter in the semantic service.
+1. **Contract enrichment**: add optional `commit_sha` + `pr_number` to ingestion proto + webhook
+   payload + `pkg/envelope` (SubmissionV1, VerdictV1 — additive, update golden tests) + orchestrator
+   domain/codec passthrough. Unblocks the GitHub commit-status notifier (D-025).
+2. **GitHub notifier** in the reporter: commit-status adapter (token via env; design key handling —
+   record decision), behind config like the webhook one.
+3. Then P3 surfaces: real tier-2 vLLM adapter in semantic, or the CLI "Code Sweeper"
+   (clients/cli) — ask the user which first if both seem equal.
 
 ## Blockers / gotchas
 
-- **Push**: workflow scope (banner above). **Docker**: needs a manual Docker Desktop start; engine
-  flaky this machine — never block on it.
+- **Push**: workflow scope (banner above). **Docker**: engine flaky — start Docker Desktop manually;
+  never block on it.
 - **Stray `GOWORK`** → ALWAYS `task …` or `GOWORK=off`. **buf** = prebuilt exe. **`-race`** = CI-only.
-- Python venv: `services/semantic/.venv` (`task setup:py` recreates).
-- Integration tests: `MEMBRANE_ORCHESTRATOR_TEST_DSN` / `MEMBRANE_RESOLVER_TEST_DSN` =
-  `postgres://membrane:membrane@localhost:5432/membrane`.
+- Python venv: `services/semantic/.venv` (`task setup:py`). Integration tests need
+  `MEMBRANE_{ORCHESTRATOR,RESOLVER}_TEST_DSN=postgres://membrane:membrane@localhost:5432/membrane`.
+- Reporter consumes from the topic START for a new group — point a fresh group at prod data carefully.
 
 ## How to verify
 
-- `task ci` → all green.
-- D-024 story: `services/orchestrator/internal/app/process_test.go` (masked-diff threading),
-  `internal/app/optional_test.go`, `internal/adapters/semanticstage/stage_test.go` (request capture:
-  masked_diff + gold_context), `internal/adapters/grpcstage/stage_test.go` (MaskedDiff mapping).
+- `task ci` → all green (7 Go modules + Python).
+- Reporter story: `services/reporter/internal/app/dispatch_test.go` (idempotency + partial-failure
+  retry), `internal/adapters/notify/webhook_test.go`; live: run `task run:reporter` with
+  `MEMBRANE_REPORTER_WEBHOOK_URL` pointed at any sink — it replays topic verdicts as notifications.
+- Full-loop E2E recipe: previous HANDOVER section "5-service E2E" + start reporter alongside.

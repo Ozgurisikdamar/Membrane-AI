@@ -1,0 +1,114 @@
+// Package domain holds the pure reporter domain: turning a consumed verdict
+// into a human-facing report. No I/O (ENGINEERING-STANDARDS §1).
+package domain
+
+import (
+	"fmt"
+	"strings"
+
+	"github.com/Ozgurisikdamar/Membrane-AI/pkg/errs"
+)
+
+// Outcome is the report-level state derived from a verdict decision.
+type Outcome string
+
+// Outcomes map 1:1 onto CI/commit-status semantics.
+const (
+	OutcomeSuccess Outcome = "success" // approved
+	OutcomeFailure Outcome = "failure" // rejected
+	OutcomeNeutral Outcome = "neutral" // needs_review — a human must look
+)
+
+// Finding mirrors one verdict finding for rendering.
+type Finding struct {
+	Stage    string
+	Rule     string
+	Severity string
+	Message  string
+}
+
+// Verdict is the consumed shape the reporter works from (decoded off the bus).
+type Verdict struct {
+	SubmissionID   string
+	OrganizationID string
+	Decision       string
+	Source         string
+	RulesetVersion string
+	Findings       []Finding
+}
+
+// Report is the rendered notification.
+type Report struct {
+	SubmissionID   string
+	OrganizationID string
+	Outcome        Outcome
+	Title          string
+	Body           string
+}
+
+const op = "reporter.domain.NewReport"
+
+// NewReport validates and renders a verdict into a notification-ready report.
+func NewReport(v Verdict) (Report, error) {
+	if strings.TrimSpace(v.SubmissionID) == "" {
+		return Report{}, errs.Validation(op, "submission_id is required", nil)
+	}
+	outcome, err := outcomeFor(v.Decision)
+	if err != nil {
+		return Report{}, err
+	}
+	return Report{
+		SubmissionID:   v.SubmissionID,
+		OrganizationID: v.OrganizationID,
+		Outcome:        outcome,
+		Title:          title(outcome, v),
+		Body:           body(v),
+	}, nil
+}
+
+func outcomeFor(decision string) (Outcome, error) {
+	switch decision {
+	case "approved":
+		return OutcomeSuccess, nil
+	case "rejected":
+		return OutcomeFailure, nil
+	case "needs_review":
+		return OutcomeNeutral, nil
+	default:
+		return "", errs.Validation(op, "unknown decision "+decision, nil)
+	}
+}
+
+func title(outcome Outcome, v Verdict) string {
+	switch outcome {
+	case OutcomeSuccess:
+		return "MEMBRANE.AI ✓ approved — architectural & security checks passed"
+	case OutcomeFailure:
+		return fmt.Sprintf("MEMBRANE.AI ✗ rejected — %d finding(s) must be fixed", len(v.Findings))
+	default:
+		return "MEMBRANE.AI ⚠ needs review — human sign-off required"
+	}
+}
+
+// maxBodyFindings caps the rendered list so chat messages stay readable.
+const maxBodyFindings = 10
+
+func body(v Verdict) string {
+	var b strings.Builder
+	fmt.Fprintf(&b, "submission %s · source %s · ruleset %s\n", v.SubmissionID, v.Source, v.RulesetVersion)
+	n := len(v.Findings)
+	shown := v.Findings
+	if n > maxBodyFindings {
+		shown = v.Findings[:maxBodyFindings]
+	}
+	for _, f := range shown {
+		fmt.Fprintf(&b, "• [%s] %s (%s): %s\n", f.Stage, f.Rule, f.Severity, f.Message)
+	}
+	if n > maxBodyFindings {
+		fmt.Fprintf(&b, "… and %d more finding(s)\n", n-maxBodyFindings)
+	}
+	if n == 0 {
+		b.WriteString("no findings\n")
+	}
+	return strings.TrimRight(b.String(), "\n")
+}

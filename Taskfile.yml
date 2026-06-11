@@ -5,7 +5,7 @@ version: "3"
 # together; see docs/HANDOVER.md). CGO is off for portable local builds.
 
 vars:
-  GO_MODULES: pkg proto services/analyzer services/ingestion services/orchestrator services/resolver
+  GO_MODULES: pkg proto services/analyzer services/ingestion services/orchestrator services/reporter services/resolver
   # Path to the semantic service's venv interpreter (created by task setup:py).
   SEMANTIC_PY: '{{if eq OS "windows"}}.venv/Scripts/python.exe{{else}}.venv/bin/python{{end}}'
 
@@ -147,3 +147,12 @@ tasks:
       MEMBRANE_RESOLVER_LOG_LEVEL: "debug"
     cmds:
       - go run ./cmd/resolver
+
+  run:reporter:
+    desc: Run the reporter service (health :8105; consumes code.verdict.v1)
+    dir: services/reporter
+    env:
+      GOWORK: "off"
+      MEMBRANE_REPORTER_LOG_LEVEL: "debug"
+    cmds:
+      - go run ./cmd/reporter
