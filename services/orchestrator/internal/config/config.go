@@ -36,6 +36,10 @@ type Config struct {
 	RulesetVersion   string
 	UseInMemory      bool // when true, run without Kafka/Redis — dev only
 	ShutdownTimeout  time.Duration
+	// OTLPEndpoint is the OTLP/gRPC collector address (host:port); empty disables
+	// tracing (D-032). OTLPInsecure sends over plaintext gRPC for dev collectors.
+	OTLPEndpoint string
+	OTLPInsecure bool
 }
 
 // Load reads and validates configuration, failing fast on bad values.
@@ -60,6 +64,8 @@ func Load() (Config, error) {
 		RulesetVersion:   l.String("RULESET_VERSION", "v1"),
 		UseInMemory:      l.Bool("USE_IN_MEMORY", false),
 		ShutdownTimeout:  l.Duration("SHUTDOWN_TIMEOUT", 15*time.Second),
+		OTLPEndpoint:     l.String("OTLP_ENDPOINT", ""),
+		OTLPInsecure:     l.Bool("OTLP_INSECURE", true),
 	}
 	return c, l.Err()
 }

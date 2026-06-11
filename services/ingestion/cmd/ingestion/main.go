@@ -18,6 +18,7 @@ import (
 
 	"github.com/Ozgurisikdamar/Membrane-AI/pkg/health"
 	"github.com/Ozgurisikdamar/Membrane-AI/pkg/logging"
+	"github.com/Ozgurisikdamar/Membrane-AI/pkg/observability"
 	ingestionv1 "github.com/Ozgurisikdamar/Membrane-AI/proto/gen/membrane/ingestion/v1"
 	"github.com/Ozgurisikdamar/Membrane-AI/services/ingestion/internal/adapters/grpcserver"
 	"github.com/Ozgurisikdamar/Membrane-AI/services/ingestion/internal/adapters/httpwebhook"
@@ -45,6 +46,15 @@ func run(log *slog.Logger) error {
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
+
+	otelShutdown, err := observability.Setup(ctx, observability.Config{
+		ServiceName: "ingestion", ServiceVersion: "0.1.0",
+		OTLPEndpoint: cfg.OTLPEndpoint, Insecure: cfg.OTLPInsecure,
+	})
+	if err != nil {
+		return err
+	}
+	defer observability.Stop(otelShutdown)
 
 	healthH := health.New(2 * time.Second)
 

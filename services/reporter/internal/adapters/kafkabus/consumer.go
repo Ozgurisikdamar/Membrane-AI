@@ -12,6 +12,7 @@ import (
 
 	"github.com/Ozgurisikdamar/Membrane-AI/pkg/envelope"
 	"github.com/Ozgurisikdamar/Membrane-AI/pkg/errs"
+	"github.com/Ozgurisikdamar/Membrane-AI/pkg/observability"
 	"github.com/Ozgurisikdamar/Membrane-AI/services/reporter/internal/domain"
 )
 
@@ -64,6 +65,17 @@ func (c *Consumer) Run(ctx context.Context) error {
 }
 
 func (c *Consumer) handleRecord(ctx context.Context, rec *kgo.Record) {
+	// Rejoin any trace carried on the verdict record, then span the dispatch.
+	if len(rec.Headers) > 0 {
+		hdr := make(map[string]string, len(rec.Headers))
+		for _, h := range rec.Headers {
+			hdr[h.Key] = string(h.Value)
+		}
+		ctx = observability.ExtractContext(ctx, hdr)
+	}
+	ctx, end := observability.Start(ctx, "reporter", "reporter.report")
+	defer end()
+
 	var env envelope.VerdictV1
 	if err := json.Unmarshal(rec.Value, &env); err != nil {
 		c.log.Error("skipping malformed verdict record", "offset", rec.Offset, "err", err)

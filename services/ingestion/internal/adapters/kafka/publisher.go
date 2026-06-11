@@ -13,6 +13,7 @@ import (
 
 	"github.com/Ozgurisikdamar/Membrane-AI/pkg/envelope"
 	"github.com/Ozgurisikdamar/Membrane-AI/pkg/errs"
+	"github.com/Ozgurisikdamar/Membrane-AI/pkg/observability"
 	"github.com/Ozgurisikdamar/Membrane-AI/services/ingestion/internal/ports"
 )
 
@@ -38,7 +39,12 @@ func NewPublisher(brokers []string, topic string) (*Publisher, error) {
 }
 
 // Publish marshals the event and produces it synchronously, keyed by org ID.
+// It opens the originating trace span and stamps W3C trace context into the
+// record headers so downstream consumers join the same distributed trace (D-032).
 func (p *Publisher) Publish(ctx context.Context, e ports.Event) error {
+	ctx, end := observability.Start(ctx, "ingestion", "ingestion.publish")
+	defer end()
+
 	payload, err := json.Marshal(envelope.SubmissionV1{
 		SubmissionID:   e.SubmissionID,
 		OrganizationID: e.OrganizationID,
@@ -55,6 +61,9 @@ func (p *Publisher) Publish(ctx context.Context, e ports.Event) error {
 		return errs.Internal(op, "marshal event", err)
 	}
 	rec := &kgo.Record{Topic: p.topic, Key: []byte(e.OrganizationID), Value: payload}
+	for k, v := range observability.InjectHeaders(ctx) {
+		rec.Headers = append(rec.Headers, kgo.RecordHeader{Key: k, Value: []byte(v)})
+	}
 	if err := p.client.ProduceSync(ctx, rec).FirstErr(); err != nil {
 		return errs.Unavailable(op, "produce record", err)
 	}

@@ -11,6 +11,7 @@ package observability
 
 import (
 	"context"
+	"time"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -75,8 +76,25 @@ func Setup(ctx context.Context, cfg Config) (Shutdown, error) {
 	return tp.Shutdown, nil
 }
 
+// Stop runs a Shutdown under a bounded timeout — for `defer observability.Stop(sh)`
+// in a composition root, so trace flushing never hangs process exit.
+func Stop(shutdown Shutdown) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	_ = shutdown(ctx)
+}
+
 // Tracer returns a named tracer from the global provider.
 func Tracer(name string) trace.Tracer { return otel.Tracer(name) }
+
+// Start opens a span on the named tracer and returns the child context plus an
+// end func — so adapters can instrument a boundary without importing the otel
+// trace packages directly (keeps the otel surface inside this package). With
+// tracing disabled the span is a no-op and end() is cheap.
+func Start(ctx context.Context, tracer, span string) (context.Context, func()) {
+	ctx, s := otel.Tracer(tracer).Start(ctx, span)
+	return ctx, func() { s.End() }
+}
 
 // InjectHeaders serializes the active trace context into a string map suitable
 // for attaching to a transport that has no native carrier — e.g. Kafka record

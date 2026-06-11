@@ -16,6 +16,7 @@ import (
 
 	"github.com/Ozgurisikdamar/Membrane-AI/pkg/health"
 	"github.com/Ozgurisikdamar/Membrane-AI/pkg/logging"
+	"github.com/Ozgurisikdamar/Membrane-AI/pkg/observability"
 	"github.com/Ozgurisikdamar/Membrane-AI/services/orchestrator/internal/adapters/grpcstage"
 	"github.com/Ozgurisikdamar/Membrane-AI/services/orchestrator/internal/adapters/kafkabus"
 	"github.com/Ozgurisikdamar/Membrane-AI/services/orchestrator/internal/adapters/memorycache"
@@ -50,6 +51,15 @@ func run(log *slog.Logger) error {
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
+
+	otelShutdown, err := observability.Setup(ctx, observability.Config{
+		ServiceName: "orchestrator", ServiceVersion: "0.1.0",
+		OTLPEndpoint: cfg.OTLPEndpoint, Insecure: cfg.OTLPInsecure,
+	})
+	if err != nil {
+		return err
+	}
+	defer observability.Stop(otelShutdown)
 
 	healthH := health.New(2 * time.Second)
 

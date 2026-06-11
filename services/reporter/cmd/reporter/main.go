@@ -14,6 +14,7 @@ import (
 
 	"github.com/Ozgurisikdamar/Membrane-AI/pkg/health"
 	"github.com/Ozgurisikdamar/Membrane-AI/pkg/logging"
+	"github.com/Ozgurisikdamar/Membrane-AI/pkg/observability"
 	"github.com/Ozgurisikdamar/Membrane-AI/services/reporter/internal/adapters/kafkabus"
 	"github.com/Ozgurisikdamar/Membrane-AI/services/reporter/internal/adapters/memorylog"
 	"github.com/Ozgurisikdamar/Membrane-AI/services/reporter/internal/adapters/notify"
@@ -38,6 +39,15 @@ func run(log *slog.Logger) error {
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
+
+	otelShutdown, err := observability.Setup(ctx, observability.Config{
+		ServiceName: "reporter", ServiceVersion: "0.1.0",
+		OTLPEndpoint: cfg.OTLPEndpoint, Insecure: cfg.OTLPInsecure,
+	})
+	if err != nil {
+		return err
+	}
+	defer observability.Stop(otelShutdown)
 
 	notifiers := []ports.Notifier{notify.NewLogger(log)}
 	if cfg.WebhookURL != "" {

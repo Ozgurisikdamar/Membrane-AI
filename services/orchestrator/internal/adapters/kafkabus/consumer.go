@@ -11,6 +11,7 @@ import (
 	"github.com/twmb/franz-go/pkg/kgo"
 
 	"github.com/Ozgurisikdamar/Membrane-AI/pkg/errs"
+	"github.com/Ozgurisikdamar/Membrane-AI/pkg/observability"
 	"github.com/Ozgurisikdamar/Membrane-AI/services/orchestrator/internal/adapters/codec"
 	"github.com/Ozgurisikdamar/Membrane-AI/services/orchestrator/internal/domain"
 )
@@ -65,6 +66,18 @@ func (c *Consumer) Run(ctx context.Context) error {
 }
 
 func (c *Consumer) handleRecord(ctx context.Context, rec *kgo.Record) {
+	// Rejoin the producer's distributed trace from the record headers, then
+	// span the Saga so the whole pipeline shows up under one trace (D-032).
+	if len(rec.Headers) > 0 {
+		hdr := make(map[string]string, len(rec.Headers))
+		for _, h := range rec.Headers {
+			hdr[h.Key] = string(h.Value)
+		}
+		ctx = observability.ExtractContext(ctx, hdr)
+	}
+	ctx, end := observability.Start(ctx, "orchestrator", "orchestrator.process")
+	defer end()
+
 	sub, err := codec.DecodeSubmission(rec.Value)
 	if err != nil {
 		// Poison messages must not wedge the partition: log and skip.

@@ -15,6 +15,10 @@ type Config struct {
 	DatabaseURL     string
 	EmbedDim        int
 	ShutdownTimeout time.Duration
+	// OTLPEndpoint is the OTLP/gRPC collector address (host:port); empty disables
+	// tracing (D-032). OTLPInsecure sends over plaintext gRPC for dev collectors.
+	OTLPEndpoint string
+	OTLPInsecure bool
 }
 
 // Load reads and validates configuration, failing fast on bad values.
@@ -26,6 +30,8 @@ func Load() (Config, error) {
 		DatabaseURL:     l.String("DATABASE_URL", "postgres://membrane:membrane@localhost:5432/membrane"),
 		EmbedDim:        l.Int("EMBED_DIM", 3072), // must match gold_codebase_index.embedding
 		ShutdownTimeout: l.Duration("SHUTDOWN_TIMEOUT", 15*time.Second),
+		OTLPEndpoint:    l.String("OTLP_ENDPOINT", ""),
+		OTLPInsecure:    l.Bool("OTLP_INSECURE", true),
 	}
 	return c, l.Err()
 }

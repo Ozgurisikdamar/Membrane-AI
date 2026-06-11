@@ -19,6 +19,10 @@ type Config struct {
 	UseInMemory     bool // when true, publish in-memory (no Kafka) — local/dev only
 	WebhookSecret   string
 	ShutdownTimeout time.Duration
+	// OTLPEndpoint is the OTLP/gRPC collector address (host:port); empty disables
+	// tracing (D-032). OTLPInsecure sends over plaintext gRPC for dev collectors.
+	OTLPEndpoint string
+	OTLPInsecure bool
 }
 
 // Load reads and validates configuration, failing fast on bad values.
@@ -33,6 +37,8 @@ func Load() (Config, error) {
 		UseInMemory:     l.Bool("USE_IN_MEMORY", false),
 		WebhookSecret:   l.String("WEBHOOK_SECRET", ""),
 		ShutdownTimeout: l.Duration("SHUTDOWN_TIMEOUT", 15*time.Second),
+		OTLPEndpoint:    l.String("OTLP_ENDPOINT", ""),
+		OTLPInsecure:    l.Bool("OTLP_INSECURE", true),
 	}
 	return c, l.Err()
 }

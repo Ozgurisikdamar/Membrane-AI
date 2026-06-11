@@ -13,6 +13,10 @@ type Config struct {
 	GRPCAddr        string
 	HealthAddr      string
 	ShutdownTimeout time.Duration
+	// OTLPEndpoint is the OTLP/gRPC collector address (host:port); empty disables
+	// tracing (D-032). OTLPInsecure sends over plaintext gRPC for dev collectors.
+	OTLPEndpoint string
+	OTLPInsecure bool
 }
 
 // Load reads and validates configuration, failing fast on bad values.
@@ -22,6 +26,8 @@ func Load() (Config, error) {
 		GRPCAddr:        l.String("GRPC_ADDR", ":9003"),
 		HealthAddr:      l.String("HEALTH_ADDR", ":8103"),
 		ShutdownTimeout: l.Duration("SHUTDOWN_TIMEOUT", 15*time.Second),
+		OTLPEndpoint:    l.String("OTLP_ENDPOINT", ""),
+		OTLPInsecure:    l.Bool("OTLP_INSECURE", true),
 	}
 	return c, l.Err()
 }

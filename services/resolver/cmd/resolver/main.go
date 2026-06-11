@@ -16,6 +16,7 @@ import (
 
 	"github.com/Ozgurisikdamar/Membrane-AI/pkg/health"
 	"github.com/Ozgurisikdamar/Membrane-AI/pkg/logging"
+	"github.com/Ozgurisikdamar/Membrane-AI/pkg/observability"
 	resolverv1 "github.com/Ozgurisikdamar/Membrane-AI/proto/gen/membrane/resolver/v1"
 	"github.com/Ozgurisikdamar/Membrane-AI/services/resolver/internal/adapters/embed"
 	"github.com/Ozgurisikdamar/Membrane-AI/services/resolver/internal/adapters/grpcserver"
@@ -40,6 +41,15 @@ func run(log *slog.Logger) error {
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
+
+	otelShutdown, err := observability.Setup(ctx, observability.Config{
+		ServiceName: "resolver", ServiceVersion: "0.1.0",
+		OTLPEndpoint: cfg.OTLPEndpoint, Insecure: cfg.OTLPInsecure,
+	})
+	if err != nil {
+		return err
+	}
+	defer observability.Stop(otelShutdown)
 
 	embedder, err := embed.NewStub(cfg.EmbedDim) // swap point: ports.Embedder (D-020)
 	if err != nil {
