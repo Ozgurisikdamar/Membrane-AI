@@ -1,6 +1,6 @@
 # Build output
 /bin/
-/dist/
+dist/           # goreleaser output (root or per-module, e.g. clients/cli/dist)
 *.exe
 *.dll
 *.so
@@ -18,6 +18,12 @@ coverage.html
 # Go
 /vendor/
 go.work.sum
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+.terraform.lock.hcl
 
 # Node (docs tooling, if ever vendored)
 node_modules/
