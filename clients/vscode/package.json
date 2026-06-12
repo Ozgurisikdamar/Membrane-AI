@@ -1,0 +1,55 @@
+{
+  "name": "membrane-code-sweeper",
+  "displayName": "MEMBRANE.AI Code Sweeper",
+  "description": "Offline secret & risky-pattern scanning in your editor, powered by the membrane CLI.",
+  "version": "0.1.0",
+  "publisher": "Ozgurisikdamar",
+  "license": "SEE LICENSE IN ../../LICENSE",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Ozgurisikdamar/Membrane-AI"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Linters"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "membrane.scanWorkspace",
+        "title": "MEMBRANE.AI: Scan Workspace"
+      }
+    ],
+    "configuration": {
+      "title": "MEMBRANE.AI",
+      "properties": {
+        "membrane.path": {
+          "type": "string",
+          "default": "membrane",
+          "description": "Path to the membrane CLI binary."
+        },
+        "membrane.scanOnSave": {
+          "type": "boolean",
+          "default": true,
+          "description": "Re-scan the workspace when a file is saved."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.85.0",
+    "typescript": "^5.4.0"
+  }
+}

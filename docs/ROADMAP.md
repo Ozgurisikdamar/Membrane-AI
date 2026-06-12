@@ -89,7 +89,9 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done.
       - [x] **packaging matrix** (`clients/cli/.goreleaser.yaml`, D-033): tarball/zip + deb/rpm
             (nfpm) + Homebrew tap + winget; `task release[:check|:snapshot]`; CI `release` job on
             `v*` tags; `membrane version` ldflag-stamped. See docs/RELEASING.md
-- [ ] **IDE extension** (VS Code / Cursor)
+- [x] **IDE extension** (`clients/vscode`, VS Code / Cursor): runs the `membrane` CLI over the
+      workspace and surfaces findings as editor diagnostics (scan-on-save); shells out to the same
+      static binary as CI (no second detector); `tsc` compiles clean
 - [ ] **SCM integration** (GitHub/GitLab) end-to-end
 - [x] **Shadow-mode → enforcement merge gates** (D-035): reporter `ENFORCEMENT_MODE` — `shadow`
       downgrades a rejection to a non-blocking neutral commit status (observe first), `enforce`
