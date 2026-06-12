@@ -7,6 +7,16 @@ _Last updated: 2026-06-12 — session: P3 completion sweep (eval harness, packag
 multi-arch, Redis delivery log, MCP gateway, shadow→enforce, VS Code ext, SCM, compliance, landing,
 dashboards)._
 
+## Last review (2026-06-12)
+
+Full-repo multi-role review (34 agents, 9 role lenses, adversarially verified): 25 raw findings →
+4 confirmed real, all fixed: (1) **reporter notifier HTTP calls were unbounded** — now bounded by a
+30s client timeout (the serial verdict consumer could hang on a stalled GitHub/webhook endpoint);
+(2) **semantic config didn't reject ≤0 timeouts** → `_get_positive_float` fail-fast + `test_config.py`
+(new); (3+4) **Terraform module only plumbed ~half the chart values** → now exposes the full surface
+(vLLM, premium keys+models, enforcement_mode, GHE URL, webhook URL, otlp_insecure). Everything else
+was refuted (codebase held up). All green after fixes.
+
 ## Push policy
 
 The user pushes manually (`git push` in their own terminal). Check pending:
