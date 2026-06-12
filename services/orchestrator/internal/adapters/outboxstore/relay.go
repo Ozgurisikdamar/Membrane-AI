@@ -6,15 +6,17 @@ import (
 	"time"
 )
 
+// RecordPublisher delivers one raw record to the bus (implemented by
+// kafkabus.Publisher.PublishRecord). headers carries the W3C trace context
+// captured when the verdict was enqueued, so the consumer rejoins the trace
+// across the asynchronous outbox hop (D-032).
+type RecordPublisher func(ctx context.Context, topic string, key, value []byte, headers map[string]string) error
+
 // Shipper is the slice of Store the relay needs (narrow interface so the relay
 // is unit-testable with a fake).
 type Shipper interface {
-	PublishPending(ctx context.Context, batch int, publish func(ctx context.Context, topic string, key, value []byte) error) (int, error)
+	PublishPending(ctx context.Context, batch int, publish RecordPublisher) (int, error)
 }
-
-// RecordPublisher delivers one raw record to the bus (implemented by
-// kafkabus.Publisher.PublishRecord).
-type RecordPublisher func(ctx context.Context, topic string, key, value []byte) error
 
 // Relay periodically ships pending outbox rows to the bus (D-021: the relay
 // runs in-process; FOR UPDATE SKIP LOCKED makes concurrent replicas safe).

@@ -84,15 +84,14 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done.
 - [ ] **IDE extension** (VS Code / Cursor)
 - [ ] **SCM integration** (GitHub/GitLab) end-to-end
 - [ ] **Shadow-mode → enforcement** merge gates
-- [~] **Observability & SRE** (OpenTelemetry, SLOs, dashboards)
-      - [x] **`pkg/observability` (D-032)**: OTLP/gRPC trace exporter gated on endpoint, W3C
-            propagation, Kafka header carrier, slog bridge; wired into all 5 Go services with
-            cross-Kafka distributed tracing (ingestion→orchestrator), Helm + compose OTLP wiring
-      - [x] **otelgrpc/otelhttp auto-instrumentation** (increment 2): orchestrator gRPC clients +
-            ingestion/analyzer/resolver gRPC servers + orchestrator→semantic and ingestion-webhook
-            HTTP — analyzer/resolver/semantic hops now join the trace
-      - [ ] OTel metrics, Python (semantic) tracing, outbox-side verdict propagation, bundled
-            collector + dashboards, SLOs
+- [x] **Observability & SRE** (OpenTelemetry) — traces + metrics across the fleet (D-032)
+      - [x] **`pkg/observability`**: OTLP/gRPC trace+metric exporters gated on endpoint, W3C
+            propagation, Kafka header carrier, slog bridge; wired into all 5 Go services
+      - [x] **otelgrpc/otelhttp auto-instrumentation**: every gRPC/HTTP hop joins the trace
+      - [x] **increment 3**: OTel metrics (`membrane_verdicts_total`), Python (semantic) tracing,
+            outbox-side verdict propagation (full ingestion→orchestrator→reporter trace), opt-in
+            bundled collector (`--profile observability`)
+      - [ ] dashboards + SLOs (Grafana/Tempo/Prometheus dashboards — GTM/ops polish)
 - [~] **Deployment**: SaaS / VPC / air-gapped — Terraform + Helm; multi-arch images; static client packaging
       - [x] **Container images (D-029)**: parameterized distroless Dockerfile for all Go services +
             python-slim semantic; `task build:images`; `docker-compose.full.yml` all-container profile

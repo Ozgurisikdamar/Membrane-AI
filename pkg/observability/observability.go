@@ -15,8 +15,11 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
@@ -74,13 +77,36 @@ func Setup(ctx context.Context, cfg Config) (Shutdown, error) {
 	if err != nil {
 		return noop, err
 	}
-
 	tp := sdktrace.NewTracerProvider(
 		sdktrace.WithBatcher(exporter),
 		sdktrace.WithResource(res),
 	)
 	otel.SetTracerProvider(tp)
-	return tp.Shutdown, nil
+
+	// Metrics share the same endpoint/resource (D-032 increment 3).
+	metricOpts := []otlpmetricgrpc.Option{otlpmetricgrpc.WithEndpoint(cfg.OTLPEndpoint)}
+	if cfg.Insecure {
+		metricOpts = append(metricOpts, otlpmetricgrpc.WithInsecure())
+	}
+	metricExp, err := otlpmetricgrpc.New(ctx, metricOpts...)
+	if err != nil {
+		return tp.Shutdown, err // tracing is up; surface the metric error
+	}
+	mp := sdkmetric.NewMeterProvider(
+		sdkmetric.WithReader(sdkmetric.NewPeriodicReader(metricExp)),
+		sdkmetric.WithResource(res),
+	)
+	otel.SetMeterProvider(mp)
+
+	// Combined shutdown flushes both pipelines.
+	return func(c context.Context) error {
+		tErr := tp.Shutdown(c)
+		mErr := mp.Shutdown(c)
+		if tErr != nil {
+			return tErr
+		}
+		return mErr
+	}, nil
 }
 
 // Stop runs a Shutdown under a bounded timeout — for `defer observability.Stop(sh)`
@@ -93,6 +119,10 @@ func Stop(shutdown Shutdown) {
 
 // Tracer returns a named tracer from the global provider.
 func Tracer(name string) trace.Tracer { return otel.Tracer(name) }
+
+// Meter returns a named meter from the global provider (no-op until Setup wires
+// an exporter, so instrument creation is always safe).
+func Meter(name string) metric.Meter { return otel.Meter(name) }
 
 // Start opens a span on the named tracer and returns the child context plus an
 // end func — so adapters can instrument a boundary without importing the otel

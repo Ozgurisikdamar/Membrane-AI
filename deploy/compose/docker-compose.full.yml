@@ -132,8 +132,21 @@ services:
       MEMBRANE_SEMANTIC_PREMIUM_ENABLED: ${MEMBRANE_SEMANTIC_PREMIUM_ENABLED:-0}
       MEMBRANE_SEMANTIC_ANTHROPIC_API_KEY: ${MEMBRANE_SEMANTIC_ANTHROPIC_API_KEY:-}
       MEMBRANE_SEMANTIC_GEMINI_API_KEY: ${MEMBRANE_SEMANTIC_GEMINI_API_KEY:-}
+      MEMBRANE_SEMANTIC_OTLP_ENDPOINT: ${MEMBRANE_OTLP_ENDPOINT:-}
+      MEMBRANE_SEMANTIC_OTLP_INSECURE: ${MEMBRANE_OTLP_INSECURE:-true}
     ports:
       - "8005:8005"   # HTTP + health (D-023)
+
+  # Opt-in trace/metric collector (D-032). Enable with `--profile observability`
+  # and point the services at it: MEMBRANE_OTLP_ENDPOINT=otel-collector:4317.
+  otel-collector:
+    image: otel/opentelemetry-collector:0.115.0
+    profiles: ["observability"]
+    command: ["--config=/etc/otelcol/config.yaml"]
+    volumes:
+      - ./otel-collector.yaml:/etc/otelcol/config.yaml:ro
+    ports:
+      - "4317:4317" # OTLP/gRPC
 
   orchestrator:
     image: membrane/orchestrator:dev

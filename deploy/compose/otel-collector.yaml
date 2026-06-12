@@ -1,0 +1,27 @@
+# Minimal OpenTelemetry Collector for the dev/demo trace pipeline (D-032).
+# Receives OTLP/gRPC from the services and prints spans + metrics to its own
+# logs (the `debug` exporter) so the distributed trace is visible without
+# standing up Jaeger/Tempo/Prometheus. Swap `debug` for a real backend in prod.
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+
+processors:
+  batch: {}
+
+exporters:
+  debug:
+    verbosity: detailed
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [debug]
+    metrics:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [debug]

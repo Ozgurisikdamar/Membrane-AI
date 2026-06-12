@@ -55,6 +55,10 @@ class Config:
     premium_gemini_api_key: str
     premium_gemini_model: str
     premium_timeout_seconds: float
+    # Distributed tracing (D-032): OTLP/gRPC collector address (empty = off);
+    # otlp_insecure sends over plaintext gRPC for a dev collector.
+    otlp_endpoint: str
+    otlp_insecure: bool
 
     @staticmethod
     def load() -> Config:
@@ -77,4 +81,6 @@ class Config:
             premium_gemini_api_key=_get("GEMINI_API_KEY", ""),
             premium_gemini_model=_get("PREMIUM_GEMINI_MODEL", "gemini-2.5-pro"),
             premium_timeout_seconds=_get_float("PREMIUM_TIMEOUT_SECONDS", 30.0),
+            otlp_endpoint=_get("OTLP_ENDPOINT", ""),
+            otlp_insecure=_get_bool("OTLP_INSECURE", default=False),
         )

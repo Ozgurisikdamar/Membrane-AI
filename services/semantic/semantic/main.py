@@ -6,6 +6,7 @@ from __future__ import annotations
 import uvicorn
 from fastapi import FastAPI
 
+from semantic.adapters import tracing
 from semantic.adapters.fallback import FallbackLocalModel
 from semantic.adapters.http_api import create_app
 from semantic.adapters.local_stub import HeuristicLocalModel
@@ -44,7 +45,9 @@ def build() -> tuple[FastAPI, Config]:
         premium_enabled=cfg.premium_enabled,
         escalation_threshold=cfg.escalation_threshold,
     )
-    return create_app(evaluate, closeables), cfg
+    app = create_app(evaluate, closeables)
+    tracing.configure(app, cfg)  # distributed tracing, gated on OTLP endpoint (D-032)
+    return app, cfg
 
 
 def _build_premium(cfg: Config) -> PremiumConsensus:

@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/Ozgurisikdamar/Membrane-AI/pkg/errs"
+	"github.com/Ozgurisikdamar/Membrane-AI/pkg/observability"
 	"github.com/Ozgurisikdamar/Membrane-AI/services/orchestrator/internal/adapters/codec"
 	"github.com/Ozgurisikdamar/Membrane-AI/services/orchestrator/internal/domain"
 )
@@ -51,6 +52,12 @@ func (s *Store) Publish(ctx context.Context, v domain.Verdict) error {
 	if err != nil {
 		return errs.Internal(op, "marshal audit detail", err)
 	}
+	// Capture the active trace context so the relay can stamp it on the outbound
+	// record and the reporter rejoins the trace across this async hop (D-032).
+	headers, err := json.Marshal(observability.InjectHeaders(ctx))
+	if err != nil {
+		return errs.Internal(op, "marshal trace headers", err)
+	}
 
 	tx, err := s.pool.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
@@ -66,9 +73,9 @@ func (s *Store) Publish(ctx context.Context, v domain.Verdict) error {
 		return errs.Unavailable(op, "insert verdict_audit", err)
 	}
 	if _, err := tx.Exec(ctx,
-		`INSERT INTO outbox (aggregate, topic, partition_key, payload)
-		 VALUES ($1, $2, $3, $4)`,
-		aggregate, s.topic, v.OrganizationID, payload,
+		`INSERT INTO outbox (aggregate, topic, partition_key, payload, headers)
+		 VALUES ($1, $2, $3, $4, $5)`,
+		aggregate, s.topic, v.OrganizationID, payload, headers,
 	); err != nil {
 		return errs.Unavailable(op, "insert outbox", err)
 	}
@@ -84,7 +91,7 @@ func (s *Store) Publish(ctx context.Context, v domain.Verdict) error {
 // row. Delivery is at-least-once: if the commit fails after a successful
 // produce, the row is retried — consumers must dedupe (they key on
 // submission_id). Returns the number of rows shipped.
-func (s *Store) PublishPending(ctx context.Context, batch int, publish func(ctx context.Context, topic string, key, value []byte) error) (int, error) {
+func (s *Store) PublishPending(ctx context.Context, batch int, publish RecordPublisher) (int, error) {
 	tx, err := s.pool.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
 		return 0, errs.Unavailable(op, "begin relay tx", err)
@@ -92,7 +99,7 @@ func (s *Store) PublishPending(ctx context.Context, batch int, publish func(ctx 
 	defer func() { _ = tx.Rollback(ctx) }()
 
 	rows, err := tx.Query(ctx,
-		`SELECT id, topic, partition_key, payload
+		`SELECT id, topic, partition_key, payload, headers
 		 FROM outbox
 		 WHERE published_at IS NULL
 		 ORDER BY id
@@ -107,11 +114,12 @@ func (s *Store) PublishPending(ctx context.Context, batch int, publish func(ctx 
 		topic   string
 		key     string
 		payload []byte
+		headers []byte
 	}
 	var claimed []pending
 	for rows.Next() {
 		var p pending
-		if err := rows.Scan(&p.id, &p.topic, &p.key, &p.payload); err != nil {
+		if err := rows.Scan(&p.id, &p.topic, &p.key, &p.payload, &p.headers); err != nil {
 			rows.Close()
 			return 0, errs.Internal(op, "scan pending", err)
 		}
@@ -127,7 +135,12 @@ func (s *Store) PublishPending(ctx context.Context, batch int, publish func(ctx 
 
 	ids := make([]int64, 0, len(claimed))
 	for _, p := range claimed {
-		if err := publish(ctx, p.topic, []byte(p.key), p.payload); err != nil {
+		var headers map[string]string
+		if len(p.headers) > 0 {
+			// A malformed headers blob must not wedge delivery — ship without it.
+			_ = json.Unmarshal(p.headers, &headers)
+		}
+		if err := publish(ctx, p.topic, []byte(p.key), p.payload, headers); err != nil {
 			// Roll back: rows stay pending and are retried next tick.
 			return 0, errs.Unavailable(op, "relay publish", err)
 		}

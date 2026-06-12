@@ -17,7 +17,7 @@ type fakeShipper struct {
 	err   error
 }
 
-func (f *fakeShipper) PublishPending(_ context.Context, _ int, _ func(context.Context, string, []byte, []byte) error) (int, error) {
+func (f *fakeShipper) PublishPending(_ context.Context, _ int, _ outboxstore.RecordPublisher) (int, error) {
 	f.calls.Add(1)
 	if f.err != nil {
 		return 0, f.err

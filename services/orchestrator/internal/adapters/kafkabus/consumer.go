@@ -9,6 +9,8 @@ import (
 	"log/slog"
 
 	"github.com/twmb/franz-go/pkg/kgo"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
 
 	"github.com/Ozgurisikdamar/Membrane-AI/pkg/errs"
 	"github.com/Ozgurisikdamar/Membrane-AI/pkg/logging"
@@ -27,9 +29,10 @@ type Processor interface {
 
 // Consumer polls code.submission.v1 and feeds each record into the Saga.
 type Consumer struct {
-	client *kgo.Client
-	proc   Processor
-	log    *slog.Logger
+	client   *kgo.Client
+	proc     Processor
+	log      *slog.Logger
+	verdicts metric.Int64Counter
 }
 
 // NewConsumer joins the consumer group on the submission topic.
@@ -42,7 +45,13 @@ func NewConsumer(brokers []string, topic, group string, proc Processor, log *slo
 	if err != nil {
 		return nil, errs.Unavailable(opConsumer, "create kafka client", err)
 	}
-	return &Consumer{client: client, proc: proc, log: log}, nil
+	// Counter is a no-op until tracing/metrics are wired (D-032); errors here are
+	// non-fatal — observability must never block the pipeline.
+	verdicts, _ := observability.Meter("orchestrator").Int64Counter(
+		"membrane_verdicts_total",
+		metric.WithDescription("verdicts produced by the orchestrator, by decision"),
+	)
+	return &Consumer{client: client, proc: proc, log: log, verdicts: verdicts}, nil
 }
 
 // Run polls until ctx is canceled. Malformed records are logged and skipped
@@ -92,6 +101,12 @@ func (c *Consumer) handleRecord(ctx context.Context, rec *kgo.Record) {
 	if err != nil {
 		log.Error("saga failed; record will be redelivered", "submission_id", sub.SubmissionID, "err", err)
 		return
+	}
+	if c.verdicts != nil {
+		c.verdicts.Add(ctx, 1, metric.WithAttributes(
+			attribute.String("decision", string(verdict.Decision)),
+			attribute.String("source", string(verdict.Source)),
+		))
 	}
 	log.Info("verdict published",
 		"submission_id", verdict.SubmissionID,

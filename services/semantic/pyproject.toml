@@ -8,6 +8,10 @@ dependencies = [
   "pydantic>=2.7",
   "uvicorn>=0.30",
   "httpx>=0.27",
+  # Distributed tracing (D-032); active only when MEMBRANE_SEMANTIC_OTLP_ENDPOINT is set.
+  "opentelemetry-sdk>=1.27",
+  "opentelemetry-exporter-otlp-proto-grpc>=1.27",
+  "opentelemetry-instrumentation-fastapi>=0.48b0",
 ]
 
 [project.optional-dependencies]
@@ -52,6 +56,12 @@ python_version = "3.11"
 strict = true
 warn_unreachable = true
 show_error_codes = true
+
+# OTel instrumentation packages don't all ship complete type stubs; tracing is
+# an optional adapter gated behind an env var, so don't let it block strict mode.
+[[tool.mypy.overrides]]
+module = ["opentelemetry.*"]
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

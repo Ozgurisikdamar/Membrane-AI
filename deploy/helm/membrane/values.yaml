@@ -188,6 +188,8 @@ services:
       MEMBRANE_SEMANTIC_PREMIUM_ENABLED: "{{ .Values.infra.premiumEnabled }}"
       MEMBRANE_SEMANTIC_PREMIUM_ANTHROPIC_MODEL: "{{ .Values.infra.premiumAnthropicModel }}"
       MEMBRANE_SEMANTIC_PREMIUM_GEMINI_MODEL: "{{ .Values.infra.premiumGeminiModel }}"
+      MEMBRANE_SEMANTIC_OTLP_ENDPOINT: "{{ .Values.infra.otlpEndpoint }}"
+      MEMBRANE_SEMANTIC_OTLP_INSECURE: "{{ .Values.infra.otlpInsecure }}"
     secretEnv:
       MEMBRANE_SEMANTIC_ANTHROPIC_API_KEY: anthropicApiKey
       MEMBRANE_SEMANTIC_GEMINI_API_KEY: geminiApiKey

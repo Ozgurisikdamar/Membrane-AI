@@ -60,7 +60,7 @@ func TestStore_Integration(t *testing.T) {
 
 	// 2. Failed delivery keeps the row pending (tx rollback).
 	boom := errors.New("broker down")
-	if _, err := store.PublishPending(ctx, 10, func(context.Context, string, []byte, []byte) error {
+	if _, err := store.PublishPending(ctx, 10, func(context.Context, string, []byte, []byte, map[string]string) error {
 		return boom
 	}); err == nil {
 		t.Fatal("expected relay error")
@@ -73,7 +73,7 @@ func TestStore_Integration(t *testing.T) {
 	// 3. Successful delivery marks the row published exactly once.
 	var gotTopic, gotKey string
 	var gotPayload []byte
-	n, err := store.PublishPending(ctx, 10, func(_ context.Context, topic string, key, value []byte) error {
+	n, err := store.PublishPending(ctx, 10, func(_ context.Context, topic string, key, value []byte, _ map[string]string) error {
 		gotTopic, gotKey, gotPayload = topic, string(key), value
 		return nil
 	})

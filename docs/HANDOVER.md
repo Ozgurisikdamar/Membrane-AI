@@ -35,9 +35,13 @@ The user pushes manually (`git push` in their own terminal). Check pending:
   the orchestrator→semantic client + the ingestion webhook server. Analyzer/resolver/semantic hops
   now join the trace (verified: global W3C propagator threads them; manual Kafka spans nest, no
   double-count; bufconn/httptest tests green).
-- **Deferred (next increment, not gaps)**: OTel metrics, Python (semantic) tracing, verdict-side
-  propagation through the outbox (reporter currently starts a fresh trace), a bundled collector +
-  dashboards.
+- **Increment 3 done**: OTel metrics (`membrane_verdicts_total{decision,source}` in the orchestrator,
+  meter on the same OTLP endpoint); Python (semantic) tracing (FastAPIInstrumentor, gated on
+  `MEMBRANE_SEMANTIC_OTLP_ENDPOINT`); **outbox carries the trace** (`outbox.headers` JSONB → relay
+  stamps record headers → reporter rejoins, so the full ingestion→orchestrator→reporter trace is one);
+  opt-in bundled collector in full compose (`--profile observability`, OTLP→debug).
+- **Observability is functionally complete.** Only Grafana/Tempo/Prometheus dashboards + SLOs remain
+  (ops polish, not code).
 
 - **Premium tier-3 consensus done (D-031)**: `semantic/adapters/premium_consensus.py` — Claude
   Sonnet 4.6 (Anthropic Messages API) + Gemini (generateContent) via httpx, NO SDK. `DualModelConsensus`

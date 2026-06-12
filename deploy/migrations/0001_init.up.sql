@@ -77,6 +77,7 @@ CREATE TABLE IF NOT EXISTS outbox (
     topic        VARCHAR(128) NOT NULL,
     partition_key VARCHAR(128) NOT NULL DEFAULT '',
     payload      JSONB        NOT NULL,
+    headers      JSONB        NOT NULL DEFAULT '{}'::jsonb, -- W3C trace context (D-032)
     created_at   TIMESTAMPTZ  NOT NULL DEFAULT now(),
     published_at TIMESTAMPTZ
 );

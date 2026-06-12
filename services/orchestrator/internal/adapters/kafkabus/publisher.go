@@ -7,6 +7,7 @@ import (
 	"github.com/twmb/franz-go/pkg/kgo"
 
 	"github.com/Ozgurisikdamar/Membrane-AI/pkg/errs"
+	"github.com/Ozgurisikdamar/Membrane-AI/pkg/observability"
 	"github.com/Ozgurisikdamar/Membrane-AI/services/orchestrator/internal/adapters/codec"
 	"github.com/Ozgurisikdamar/Membrane-AI/services/orchestrator/internal/domain"
 )
@@ -40,13 +41,17 @@ func (p *Publisher) Publish(ctx context.Context, v domain.Verdict) error {
 	if err != nil {
 		return err
 	}
-	return p.PublishRecord(ctx, p.topic, []byte(v.OrganizationID), payload)
+	return p.PublishRecord(ctx, p.topic, []byte(v.OrganizationID), payload, observability.InjectHeaders(ctx))
 }
 
 // PublishRecord produces a raw record; used by the outbox relay, which reads
-// already-encoded payloads from the outbox table.
-func (p *Publisher) PublishRecord(ctx context.Context, topic string, key, value []byte) error {
+// already-encoded payloads (and the captured trace headers) from the outbox
+// table. headers are written as record headers so consumers rejoin the trace.
+func (p *Publisher) PublishRecord(ctx context.Context, topic string, key, value []byte, headers map[string]string) error {
 	rec := &kgo.Record{Topic: topic, Key: key, Value: value}
+	for k, v := range headers {
+		rec.Headers = append(rec.Headers, kgo.RecordHeader{Key: k, Value: []byte(v)})
+	}
 	if err := p.client.ProduceSync(ctx, rec).FirstErr(); err != nil {
 		return errs.Unavailable(opPublisher, "produce record", err)
 	}
