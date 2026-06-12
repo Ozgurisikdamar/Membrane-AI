@@ -9,12 +9,19 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/Ozgurisikdamar/Membrane-AI/pkg/errs"
 	"github.com/Ozgurisikdamar/Membrane-AI/services/reporter/internal/domain"
 )
 
 const opWebhook = "reporter.adapters.notify.Webhook"
+
+// notifyTimeout hard-bounds every outbound notifier HTTP call. The verdict
+// consumer is serial, so a hung GitHub/webhook endpoint would otherwise block
+// consumption of all later verdicts and risk consumer-group eviction. Shared
+// by all HTTP notifiers in this package.
+const notifyTimeout = 30 * time.Second
 
 // Webhook POSTs reports as JSON to a configured URL. The payload carries a
 // Slack-compatible "text" field plus structured fields for generic consumers
@@ -24,9 +31,9 @@ type Webhook struct {
 	client *http.Client
 }
 
-// NewWebhook returns the notifier (ctx deadlines bound each call).
+// NewWebhook returns the notifier; the client is bounded by notifyTimeout.
 func NewWebhook(url string) *Webhook {
-	return &Webhook{url: url, client: &http.Client{}}
+	return &Webhook{url: url, client: &http.Client{Timeout: notifyTimeout}}
 }
 
 // Name implements ports.Notifier.

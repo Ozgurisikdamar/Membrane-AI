@@ -29,7 +29,7 @@ func NewGitHubPRComment(baseURL, token string) *GitHubPRComment {
 	if baseURL == "" {
 		baseURL = "https://api.github.com"
 	}
-	return &GitHubPRComment{baseURL: strings.TrimRight(baseURL, "/"), token: token, client: &http.Client{}}
+	return &GitHubPRComment{baseURL: strings.TrimRight(baseURL, "/"), token: token, client: &http.Client{Timeout: notifyTimeout}}
 }
 
 // Name implements ports.Notifier.

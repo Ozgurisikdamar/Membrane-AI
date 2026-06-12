@@ -36,7 +36,7 @@ func NewGitHubStatus(baseURL, token string) *GitHubStatus {
 	if baseURL == "" {
 		baseURL = "https://api.github.com"
 	}
-	return &GitHubStatus{baseURL: strings.TrimRight(baseURL, "/"), token: token, client: &http.Client{}}
+	return &GitHubStatus{baseURL: strings.TrimRight(baseURL, "/"), token: token, client: &http.Client{Timeout: notifyTimeout}}
 }
 
 // Name implements ports.Notifier.
