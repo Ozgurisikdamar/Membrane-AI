@@ -34,8 +34,9 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done.
       resolver integration (full-file content needed)
 - [x] **Context resolver** (`services/resolver`, gRPC `membrane.resolver.v1` :9004) — `GoldIndex` port +
       pgx/halfvec adapter (live-DB integration test green), stub `Embedder` (D-020), RAG top-k query
-      - [ ] swap stub embedder for real embeddings once the semantic service exists
-      - [ ] orchestrator/semantic stage consumes resolver context (P2, with the semantic service)
+      - [x] orchestrator/semantic stage consumes resolver context (RAG injection wired, D-024)
+      - [ ] swap stub embedder for real embeddings — runtime/infra: needs an embedding model endpoint
+            (the `ports.Embedder` swap point is ready; D-020)
 - [x] **Transactional outbox** (D-013/D-021): orchestrator writes `verdict_audit` + `outbox` in one ACID
       tx (`outboxstore.Store` implements the Saga's publisher port); in-process relay ships pending rows
       with `FOR UPDATE SKIP LOCKED` — proven by live-DB integration test + E2E (audit row, published=true)
@@ -57,6 +58,7 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done.
       - [x] **orchestrator semantic stage** (`semanticstage` HTTP adapter w/ Saga deadline) + **resolver
             RAG injection** (`ResolverFetcher`, best-effort) — D-024: `StageResult` threads the masked
             diff to later stages; `app.Optional` decorator keeps advisory failures non-fatal
+            - [x] orchestrator semantic stage consumes resolver context (done with the semantic service)
 - [x] **MCP gateway** (`services/gateway`, D-034): tool-call governance + package-install firewall
       (typosquat detection) + shadow-AI discovery; pure table-tested decision engine, JSON policy,
       audit sink; HTTP `:8006`. (Prompt-injection inspection of the generation stream itself is a
@@ -105,7 +107,9 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done.
       - [x] **increment 3**: OTel metrics (`membrane_verdicts_total`), Python (semantic) tracing,
             outbox-side verdict propagation (full ingestion→orchestrator→reporter trace), opt-in
             bundled collector (`--profile observability`)
-      - [ ] dashboards + SLOs (Grafana/Tempo/Prometheus dashboards — GTM/ops polish)
+      - [x] **dashboards + SLOs**: Grafana dashboard JSON (`deploy/observability/grafana-dashboard.json`,
+            uid `membrane-overview`) over `membrane_verdicts_total` + documented SLOs
+            (`deploy/observability/README.md`). Live wiring needs a running Tempo/Prometheus/Grafana.
 - [~] **Deployment**: SaaS / VPC / air-gapped — Terraform + Helm; multi-arch images; static client packaging
       - [x] **Container images (D-029)**: parameterized distroless Dockerfile for all Go services +
             python-slim semantic; `task build:images`; `docker-compose.full.yml` all-container profile
