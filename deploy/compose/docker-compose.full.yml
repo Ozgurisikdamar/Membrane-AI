@@ -111,6 +111,15 @@ services:
       - "9003:9003"   # gRPC
       - "8103:8103"   # health
 
+  gateway:
+    image: membrane/gateway:dev
+    environment:
+      MEMBRANE_GATEWAY_OTLP_ENDPOINT: ${MEMBRANE_OTLP_ENDPOINT:-}
+      MEMBRANE_GATEWAY_OTLP_INSECURE: ${MEMBRANE_OTLP_INSECURE:-true}
+    ports:
+      - "8006:8006"   # HTTP (governance API)
+      - "8106:8106"   # health
+
   resolver:
     image: membrane/resolver:dev
     depends_on:

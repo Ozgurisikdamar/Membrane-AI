@@ -57,8 +57,10 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done.
       - [x] **orchestrator semantic stage** (`semanticstage` HTTP adapter w/ Saga deadline) + **resolver
             RAG injection** (`ResolverFetcher`, best-effort) — D-024: `StageResult` threads the masked
             diff to later stages; `app.Optional` decorator keeps advisory failures non-fatal
-- [ ] **Point-of-generation prompt/MCP gateway**
-- [ ] **MCP gateway + tool-call governance + package firewall + shadow-AI discovery**
+- [x] **MCP gateway** (`services/gateway`, D-034): tool-call governance + package-install firewall
+      (typosquat detection) + shadow-AI discovery; pure table-tested decision engine, JSON policy,
+      audit sink; HTTP `:8006`. (Prompt-injection inspection of the generation stream itself is a
+      future deepening on this gateway.)
 - [~] **Reporter** (`services/reporter`, health :8105) — consumes `code.verdict.v1`; report rendering
       (outcome mapping, finding cap), idempotent fan-out per (submission, notifier); **webhook
       (Slack-compatible) + log notifiers live and E2E-proven** (D-025)
@@ -84,7 +86,9 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done.
             `--report md|html [--out file]` — per-rule/per-directory/top-file aggregates plus a
             transparent severity-weighted debt score and A–F grade; HTML is a single self-contained
             light-toned page (`internal/report`)
-      - [ ] packaging matrix: winget/brew/deb/rpm/tarball (P3 release work)
+      - [x] **packaging matrix** (`clients/cli/.goreleaser.yaml`, D-033): tarball/zip + deb/rpm
+            (nfpm) + Homebrew tap + winget; `task release[:check|:snapshot]`; CI `release` job on
+            `v*` tags; `membrane version` ldflag-stamped. See docs/RELEASING.md
 - [ ] **IDE extension** (VS Code / Cursor)
 - [ ] **SCM integration** (GitHub/GitLab) end-to-end
 - [ ] **Shadow-mode → enforcement** merge gates
@@ -103,7 +107,10 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done.
       - [x] **Helm chart (D-030)**: `deploy/helm/membrane` — generic template loop over the six
             services, external infra endpoints, optional Secret + topics hook, non-root/read-only
             pods; `task helm:lint` (helm lint + template + kubeconform), CI `helm` job
-      - [ ] Terraform · multi-arch (buildx) publish
+      - [x] **Terraform module** (`deploy/terraform`): cloud-neutral helm+kubernetes providers,
+            posture-aware (D-011), `terraform validate` green
+      - [x] **Multi-arch buildx publish**: `task publish:images` (amd64+arm64 → ghcr) + CI
+            `publish-images` job on `v*` tags
 - [ ] **Compliance prep** (SOC 2 / ISO 27001 / 42001), docs & landing site
 
 > The 20 GitHub board items map onto these phases; when you finish one, set its board card to Done and

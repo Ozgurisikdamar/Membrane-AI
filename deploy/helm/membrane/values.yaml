@@ -173,6 +173,21 @@ services:
       MEMBRANE_REPORTER_GITHUB_TOKEN: githubToken
       MEMBRANE_REPORTER_WEBHOOK_URL: webhookUrl
 
+  gateway:
+    enabled: true
+    replicas: 1
+    runAsUser: 65532
+    ports:
+      - name: http
+        port: 8006
+        addrEnv: MEMBRANE_GATEWAY_HTTP_ADDR
+    healthPort: 8106
+    healthEnv: MEMBRANE_GATEWAY_HEALTH_ADDR
+    env:
+      MEMBRANE_GATEWAY_OTLP_ENDPOINT: "{{ .Values.infra.otlpEndpoint }}"
+      MEMBRANE_GATEWAY_OTLP_INSECURE: "{{ .Values.infra.otlpInsecure }}"
+    secretEnv: {}
+
   semantic:
     enabled: true
     replicas: 1

@@ -5,7 +5,7 @@ version: "3"
 # together; see docs/HANDOVER.md). CGO is off for portable local builds.
 
 vars:
-  GO_MODULES: clients/cli eval pkg proto services/analyzer services/ingestion services/orchestrator services/reporter services/resolver
+  GO_MODULES: clients/cli eval pkg proto services/analyzer services/gateway services/ingestion services/orchestrator services/reporter services/resolver
   # Path to the semantic service's venv interpreter (created by task setup:py).
   SEMANTIC_PY: '{{if eq OS "windows"}}.venv/Scripts/python.exe{{else}}.venv/bin/python{{end}}'
 
@@ -94,11 +94,30 @@ tasks:
   build:images:
     desc: Build all service container images (distroless Go + python-slim semantic)
     vars:
-      GO_SERVICES: analyzer ingestion orchestrator reporter resolver
+      GO_SERVICES: analyzer gateway ingestion orchestrator reporter resolver
     cmds:
       - for: { var: GO_SERVICES }
         cmd: docker build -f deploy/docker/Dockerfile.go --build-arg SERVICE=services/{{.ITEM}} -t membrane/{{.ITEM}}:dev .
       - docker build -f deploy/docker/Dockerfile.semantic -t membrane/semantic:dev .
+
+  publish:images:
+    desc: Build and PUSH multi-arch (amd64+arm64) images to a registry (set REGISTRY + TAG)
+    vars:
+      GO_SERVICES: analyzer gateway ingestion orchestrator reporter resolver
+      REGISTRY: '{{.REGISTRY | default "ghcr.io/ozgurisikdamar"}}'
+      TAG: '{{.TAG | default "dev"}}'
+      PLATFORMS: linux/amd64,linux/arm64
+    cmds:
+      - docker buildx create --use --name membrane-builder 2>/dev/null || true
+      - for: { var: GO_SERVICES }
+        cmd: >-
+          docker buildx build --platform {{.PLATFORMS}}
+          -f deploy/docker/Dockerfile.go --build-arg SERVICE=services/{{.ITEM}}
+          -t {{.REGISTRY}}/membrane-{{.ITEM}}:{{.TAG}} --push .
+      - >-
+        docker buildx build --platform {{.PLATFORMS}}
+        -f deploy/docker/Dockerfile.semantic
+        -t {{.REGISTRY}}/membrane-semantic:{{.TAG}} --push .
 
   full-up:
     desc: Start the all-container profile (task build:images first)
@@ -115,6 +134,30 @@ tasks:
     dir: eval
     cmds:
       - GOWORK=off CGO_ENABLED=0 go run ./cmd/eval
+
+  release:check:
+    desc: Validate the CLI GoReleaser config (needs goreleaser)
+    dir: clients/cli
+    env:
+      GOWORK: "off"
+    cmds:
+      - goreleaser check
+
+  release:snapshot:
+    desc: Build the CLI release artifacts locally (no publish) into clients/cli/dist
+    dir: clients/cli
+    env:
+      GOWORK: "off"
+    cmds:
+      - goreleaser release --snapshot --clean
+
+  release:
+    desc: Tag-driven CLI release (run on a vX.Y.Z tag; needs GITHUB_TOKEN)
+    dir: clients/cli
+    env:
+      GOWORK: "off"
+    cmds:
+      - goreleaser release --clean
 
   helm:lint:
     desc: Lint and render the Helm chart (requires helm; schema check if kubeconform present)
@@ -178,6 +221,15 @@ tasks:
       MEMBRANE_ANALYZER_LOG_LEVEL: "debug"
     cmds:
       - go run ./cmd/analyzer
+
+  run:gateway:
+    desc: Run the MCP gateway service (HTTP :8006, health :8106)
+    dir: services/gateway
+    env:
+      GOWORK: "off"
+      MEMBRANE_GATEWAY_LOG_LEVEL: "debug"
+    cmds:
+      - go run ./cmd/gateway
 
   run:resolver:
     desc: Run the context resolver service (gRPC :9004, health :8104; needs dev postgres)
