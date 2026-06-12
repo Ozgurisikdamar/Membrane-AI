@@ -91,7 +91,9 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done.
             `v*` tags; `membrane version` ldflag-stamped. See docs/RELEASING.md
 - [ ] **IDE extension** (VS Code / Cursor)
 - [ ] **SCM integration** (GitHub/GitLab) end-to-end
-- [ ] **Shadow-mode → enforcement** merge gates
+- [x] **Shadow-mode → enforcement merge gates** (D-035): reporter `ENFORCEMENT_MODE` — `shadow`
+      downgrades a rejection to a non-blocking neutral commit status (observe first), `enforce`
+      blocks the merge; rendered in the report title, table-tested
 - [x] **Observability & SRE** (OpenTelemetry) — traces + metrics across the fleet (D-032)
       - [x] **`pkg/observability`**: OTLP/gRPC trace+metric exporters gated on endpoint, W3C
             propagation, Kafka header carrier, slog bridge; wired into all 5 Go services

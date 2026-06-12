@@ -29,7 +29,7 @@ func okVerdict() domain.Verdict {
 
 func TestHandle_NotifiesAllOnce(t *testing.T) {
 	a, b := &fakeNotifier{name: "a"}, &fakeNotifier{name: "b"}
-	uc := app.NewDispatchVerdict(memorylog.New(), a, b)
+	uc := app.NewDispatchVerdict(memorylog.New(), domain.ModeEnforce, a, b)
 
 	if err := uc.Handle(context.Background(), okVerdict()); err != nil {
 		t.Fatal(err)
@@ -46,7 +46,7 @@ func TestHandle_NotifiesAllOnce(t *testing.T) {
 func TestHandle_PartialFailureRetriesOnlyFailed(t *testing.T) {
 	good := &fakeNotifier{name: "good"}
 	bad := &fakeNotifier{name: "bad", err: errors.New("webhook 500")}
-	uc := app.NewDispatchVerdict(memorylog.New(), good, bad)
+	uc := app.NewDispatchVerdict(memorylog.New(), domain.ModeEnforce, good, bad)
 
 	err := uc.Handle(context.Background(), okVerdict())
 	if errs.KindOf(err) != errs.KindUnavailable {
@@ -66,7 +66,7 @@ func TestHandle_PartialFailureRetriesOnlyFailed(t *testing.T) {
 }
 
 func TestHandle_InvalidVerdictIsValidation(t *testing.T) {
-	uc := app.NewDispatchVerdict(memorylog.New(), &fakeNotifier{name: "a"})
+	uc := app.NewDispatchVerdict(memorylog.New(), domain.ModeEnforce, &fakeNotifier{name: "a"})
 	err := uc.Handle(context.Background(), domain.Verdict{Decision: "approved"}) // no submission id
 	if errs.KindOf(err) != errs.KindValidation {
 		t.Fatalf("kind = %v, want validation", errs.KindOf(err))

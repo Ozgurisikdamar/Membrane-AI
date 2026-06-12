@@ -30,7 +30,7 @@ func TestNewReport_OutcomeMapping(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.decision, func(t *testing.T) {
-			r, err := domain.NewReport(verdict(tt.decision))
+			r, err := domain.NewReport(verdict(tt.decision), domain.ModeEnforce)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -44,11 +44,30 @@ func TestNewReport_OutcomeMapping(t *testing.T) {
 	}
 }
 
+func TestNewReport_ShadowModeDowngradesRejection(t *testing.T) {
+	// In shadow mode a rejection must NOT block the merge: failure → neutral.
+	r, err := domain.NewReport(verdict("rejected", domain.Finding{Rule: "x"}), domain.ModeShadow)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if r.Outcome != domain.OutcomeNeutral {
+		t.Fatalf("shadow rejection outcome = %v, want neutral (non-blocking)", r.Outcome)
+	}
+	if !strings.Contains(r.Title, "shadow mode") {
+		t.Fatalf("title should flag shadow mode: %q", r.Title)
+	}
+	// Enforce mode still blocks.
+	e, _ := domain.NewReport(verdict("rejected", domain.Finding{Rule: "x"}), domain.ModeEnforce)
+	if e.Outcome != domain.OutcomeFailure {
+		t.Fatalf("enforce rejection outcome = %v, want failure", e.Outcome)
+	}
+}
+
 func TestNewReport_Validation(t *testing.T) {
-	if _, err := domain.NewReport(domain.Verdict{Decision: "approved"}); errs.KindOf(err) != errs.KindValidation {
+	if _, err := domain.NewReport(domain.Verdict{Decision: "approved"}, domain.ModeEnforce); errs.KindOf(err) != errs.KindValidation {
 		t.Fatalf("missing submission id: kind = %v", errs.KindOf(err))
 	}
-	if _, err := domain.NewReport(verdict("wat")); errs.KindOf(err) != errs.KindValidation {
+	if _, err := domain.NewReport(verdict("wat"), domain.ModeEnforce); errs.KindOf(err) != errs.KindValidation {
 		t.Fatalf("unknown decision: kind = %v", errs.KindOf(err))
 	}
 }
@@ -58,7 +77,7 @@ func TestNewReport_BodyRendersAndCapsFindings(t *testing.T) {
 	for i := range many {
 		many[i] = domain.Finding{Stage: "analyzer", Rule: "r", Severity: "blocking", Message: "m"}
 	}
-	r, err := domain.NewReport(verdict("rejected", many...))
+	r, err := domain.NewReport(verdict("rejected", many...), domain.ModeEnforce)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -69,7 +88,7 @@ func TestNewReport_BodyRendersAndCapsFindings(t *testing.T) {
 		t.Fatalf("title = %q", r.Title)
 	}
 
-	empty, _ := domain.NewReport(verdict("approved"))
+	empty, _ := domain.NewReport(verdict("approved"), domain.ModeEnforce)
 	if !strings.Contains(empty.Body, "no findings") {
 		t.Fatalf("empty body = %q", empty.Body)
 	}

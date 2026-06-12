@@ -21,6 +21,7 @@ import (
 	"github.com/Ozgurisikdamar/Membrane-AI/services/reporter/internal/adapters/redislog"
 	"github.com/Ozgurisikdamar/Membrane-AI/services/reporter/internal/app"
 	"github.com/Ozgurisikdamar/Membrane-AI/services/reporter/internal/config"
+	"github.com/Ozgurisikdamar/Membrane-AI/services/reporter/internal/domain"
 	"github.com/Ozgurisikdamar/Membrane-AI/services/reporter/internal/ports"
 )
 
@@ -73,7 +74,8 @@ func run(log *slog.Logger) error {
 	} else {
 		log.Warn("in-memory delivery log (single replica) — set MEMBRANE_REPORTER_REDIS_ADDR to scale out")
 	}
-	dispatch := app.NewDispatchVerdict(deliveryLog, notifiers...)
+	dispatch := app.NewDispatchVerdict(deliveryLog, domain.Mode(cfg.EnforcementMode), notifiers...)
+	log.Info("enforcement mode", "mode", cfg.EnforcementMode)
 
 	consumer, err := kafkabus.NewConsumer(cfg.KafkaBrokers, cfg.VerdictTopic, cfg.ConsumerGroup, dispatch, log)
 	if err != nil {

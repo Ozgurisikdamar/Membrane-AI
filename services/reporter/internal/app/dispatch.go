@@ -18,18 +18,22 @@ const opDispatch = "reporter.app.DispatchVerdict"
 type DispatchVerdict struct {
 	notifiers  []ports.Notifier
 	deliveries ports.DeliveryLog
+	mode       domain.Mode
 }
 
-// NewDispatchVerdict wires the use-case.
-func NewDispatchVerdict(deliveries ports.DeliveryLog, notifiers ...ports.Notifier) *DispatchVerdict {
-	return &DispatchVerdict{notifiers: notifiers, deliveries: deliveries}
+// NewDispatchVerdict wires the use-case. An empty mode defaults to enforce.
+func NewDispatchVerdict(deliveries ports.DeliveryLog, mode domain.Mode, notifiers ...ports.Notifier) *DispatchVerdict {
+	if mode == "" {
+		mode = domain.ModeEnforce
+	}
+	return &DispatchVerdict{notifiers: notifiers, deliveries: deliveries, mode: mode}
 }
 
 // Handle renders and delivers. It returns an error when ANY destination failed
 // (so the consumer leaves the record for redelivery); already-delivered
 // destinations are skipped on retry.
 func (uc *DispatchVerdict) Handle(ctx context.Context, v domain.Verdict) error {
-	report, err := domain.NewReport(v)
+	report, err := domain.NewReport(v, uc.mode)
 	if err != nil {
 		return err // validation error: poison message, caller logs and skips
 	}

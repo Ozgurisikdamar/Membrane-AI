@@ -30,6 +30,8 @@ infra:
   vllmModel: "deepseek-coder"
   # GitHub API base URL for the reporter (only for GitHub Enterprise).
   githubApiUrl: ""
+  # Reporter merge-gate posture: enforce (rejected blocks) | shadow (non-blocking) — D-035.
+  enforcementMode: "enforce"
   # Tier-3 premium consensus (D-031). Off unless premiumEnabled AND a key is set
   # (keys live in credentials below). Flag on with no key = fails loud (503).
   premiumEnabled: false
@@ -166,6 +168,7 @@ services:
     env:
       MEMBRANE_REPORTER_KAFKA_BROKERS: "{{ .Values.infra.kafkaBrokers }}"
       MEMBRANE_REPORTER_REDIS_ADDR: "{{ .Values.infra.redisAddr }}"
+      MEMBRANE_REPORTER_ENFORCEMENT_MODE: "{{ .Values.infra.enforcementMode }}"
       MEMBRANE_REPORTER_GITHUB_API_URL: "{{ .Values.infra.githubApiUrl }}"
       MEMBRANE_REPORTER_OTLP_ENDPOINT: "{{ .Values.infra.otlpEndpoint }}"
       MEMBRANE_REPORTER_OTLP_INSECURE: "{{ .Values.infra.otlpInsecure }}"
