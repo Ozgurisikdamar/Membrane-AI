@@ -1,0 +1,86 @@
+# GoReleaser config for the MEMBRANE.AI Code Sweeper CLI (P3 release work).
+# Run from clients/ cli: `goreleaser release --clean` (tag-driven), or
+# `goreleaser release --snapshot --clean` for a local dry build. `task release`
+# wraps these. brews/winget publish to external repos — they need the tap/fork
+# repos and a GITHUB_TOKEN with access (one-time setup; see docs).
+version: 2
+project_name: membrane
+
+builds:
+  - id: membrane
+    main: ./cmd/membrane
+    binary: membrane
+    env:
+      - CGO_ENABLED=0
+      - GOWORK=off # the stray machine GOWORK must not hijack resolution
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X main.version={{ .Version }}
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+
+archives:
+  - id: membrane
+    ids: [membrane]
+    name_template: "membrane_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    files:
+      - ../../LICENSE
+      - ../../README.md
+
+nfpms:
+  - id: membrane
+    package_name: membrane
+    ids: [membrane]
+    formats: [deb, rpm]
+    maintainer: "Özgür Işık Damar <74007174+Ozgurisikdamar@users.noreply.github.com>"
+    homepage: "https://github.com/Ozgurisikdamar/Membrane-AI"
+    description: "MEMBRANE.AI Code Sweeper — offline secret & risky-pattern scanner with a Generative-AI Technical-Debt Report."
+    license: "Proprietary"
+    bindir: /usr/bin
+
+checksum:
+  name_template: "checksums.txt"
+
+brews:
+  - name: membrane
+    ids: [membrane]
+    repository:
+      owner: Ozgurisikdamar
+      name: homebrew-tap
+    homepage: "https://github.com/Ozgurisikdamar/Membrane-AI"
+    description: "MEMBRANE.AI Code Sweeper"
+    license: "Proprietary"
+    commit_author:
+      name: "Özgür Işık Damar"
+      email: "74007174+Ozgurisikdamar@users.noreply.github.com"
+
+winget:
+  - name: membrane
+    ids: [membrane]
+    publisher: Ozgurisikdamar
+    short_description: "MEMBRANE.AI Code Sweeper"
+    license: "Proprietary"
+    homepage: "https://github.com/Ozgurisikdamar/Membrane-AI"
+    repository:
+      owner: Ozgurisikdamar
+      name: winget-pkgs
+      branch: "membrane-{{ .Version }}"
+      pull_request:
+        enabled: true
+        base:
+          owner: microsoft
+          name: winget-pkgs
+          branch: master
+
+release:
+  github:
+    owner: Ozgurisikdamar
+    name: Membrane-AI
+
+changelog:
+  use: github

@@ -36,6 +36,9 @@ func sanitize(s string) string {
 	}, s)
 }
 
+// version is stamped at release time via -ldflags "-X main.version=...".
+var version = "dev"
+
 // Exit codes (stable contract for CI pipelines).
 const (
 	exitClean = 0
@@ -46,6 +49,10 @@ const (
 func main() { os.Exit(run(os.Args[1:])) }
 
 func run(args []string) int {
+	if len(args) > 0 && (args[0] == "version" || args[0] == "--version" || args[0] == "-v") {
+		fmt.Println("membrane", version)
+		return exitClean
+	}
 	if len(args) == 0 || args[0] != "scan" {
 		usage()
 		return exitUsage
@@ -185,6 +192,7 @@ func usage() {
 
 usage:
   membrane scan [path] [--json] [--report md|html] [--out file] [--fail-on=blocking|warning|never]
+  membrane version
 
   --report md|html   emit the Generative-AI Technical-Debt Report
   --out file         write the report to a file (default stdout)

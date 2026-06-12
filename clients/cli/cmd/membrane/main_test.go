@@ -18,6 +18,14 @@ func writeFile(t *testing.T, root, rel, content string) {
 	}
 }
 
+func TestRun_Version(t *testing.T) {
+	for _, arg := range []string{"version", "--version", "-v"} {
+		if got := run([]string{arg}); got != exitClean {
+			t.Errorf("%s: exit=%d want %d", arg, got, exitClean)
+		}
+	}
+}
+
 func TestRun_FlagValidation(t *testing.T) {
 	cases := []struct {
 		name string
