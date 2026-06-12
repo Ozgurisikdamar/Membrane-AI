@@ -1,0 +1,88 @@
+{
+  "cases": [
+    {
+      "name": "aws-access-key-go",
+      "language": "go",
+      "content": "const k = \"AKIAIOSFODNN7EXAMPLE\"",
+      "expect": ["aws-access-key-id"]
+    },
+    {
+      "name": "private-key-pem",
+      "language": "text",
+      "content": "-----BEGIN RSA PRIVATE KEY-----\nMIIEpAIBAAKCAQEA...\n-----END RSA PRIVATE KEY-----",
+      "expect": ["private-key-block"]
+    },
+    {
+      "name": "github-token-comment",
+      "language": "python",
+      "content": "# leaked GitHub token ghp_0123456789abcdefABCDEF0123",
+      "expect": ["github-token"]
+    },
+    {
+      "name": "slack-token-comment",
+      "language": "python",
+      "content": "# webhook xoxb-1234567890-abcdEFGHijklmnop",
+      "expect": ["slack-token"]
+    },
+    {
+      "name": "generic-assigned-secret-py",
+      "language": "python",
+      "content": "password = \"hunter2pass\"",
+      "expect": ["generic-assigned-secret"]
+    },
+    {
+      "name": "sql-string-concat-go",
+      "language": "go",
+      "content": "rows, _ := db.Query(\"SELECT * FROM users WHERE id=\" + id)",
+      "expect": ["sql-string-concat"]
+    },
+    {
+      "name": "exec-command-concat-go",
+      "language": "go",
+      "content": "out, _ := exec.Command(\"sh\", \"-c\", \"echo \" + userInput).Output()",
+      "expect": ["exec-command-concat"]
+    },
+    {
+      "name": "insecure-tls-skip-go",
+      "language": "go",
+      "content": "cfg := &tls.Config{InsecureSkipVerify: true}",
+      "expect": ["insecure-tls-skip-verify"]
+    },
+    {
+      "name": "clean-go-add",
+      "language": "go",
+      "content": "func add(a, b int) int { return a + b }",
+      "expect": []
+    },
+    {
+      "name": "clean-python-add",
+      "language": "python",
+      "content": "def add(a, b):\n    return a + b",
+      "expect": []
+    },
+    {
+      "name": "parameterized-sql-go",
+      "language": "go",
+      "content": "rows, _ := db.Query(\"SELECT * FROM users WHERE id=$1\", id)",
+      "expect": []
+    },
+    {
+      "name": "short-value-assign-py",
+      "language": "python",
+      "content": "token = \"abc\"",
+      "expect": []
+    },
+    {
+      "name": "tls-skip-in-python-scoped-out",
+      "language": "python",
+      "content": "cfg = TLSConfig(InsecureSkipVerify: true)",
+      "expect": []
+    },
+    {
+      "name": "password-mentioned-in-prose",
+      "language": "go",
+      "content": "// remember to set your password in the deployment config",
+      "expect": []
+    }
+  ]
+}

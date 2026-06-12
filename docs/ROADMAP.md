@@ -69,7 +69,10 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done.
             `issues/{pr}/comments` when `pr_number` present; same token family, httptest-covered
       - [ ] Redis-backed delivery log for multi-replica
       - [ ] IDE inline-fix channel (with the IDE extension, P3)
-- [ ] Accuracy & evaluation harness (golden datasets, precision/recall, FP-rate SLO)
+- [x] **Accuracy & evaluation harness** (`eval/`): labeled golden corpus → rule-level
+      precision/recall/F1 + clean-case FP-rate over `pkg/scan`; `task eval` (human report) and a
+      `TestGoldenCorpus_MeetsSLO` gate in CI; `eval [--min-precision/--min-recall/--max-fp-rate]`
+      exits non-zero on an SLO breach (current corpus: P/R 1.0, FP-rate 0)
 
 ## P3 — Surfaces, deployment, hardening
 
