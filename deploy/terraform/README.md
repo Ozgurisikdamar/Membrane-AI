@@ -23,6 +23,13 @@ terraform apply \
   -var 'posture=vpc'
 ```
 
+The module exposes the chart's full surface: tier-2 (`vllm_url`/`vllm_model`),
+tier-3 premium consensus (`premium_enabled` + `anthropic_api_key`/`gemini_api_key`,
+D-031), the reporter merge-gate posture (`enforcement_mode` = enforce|shadow,
+D-035), GitHub Enterprise (`github_api_url`), the Slack `webhook_url`, and
+`otlp_insecure`. Defaults equal the chart's, so a bare apply behaves like a bare
+`helm install`. Secrets are `sensitive` and never printed in plans.
+
 Apply the SQL migrations (`../migrations/*.up.sql`) to the database before first
 use — there is no in-chart migration job (pre-1.0 policy D-022).
 

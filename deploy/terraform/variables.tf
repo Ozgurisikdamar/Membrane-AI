@@ -71,6 +71,58 @@ variable "otlp_endpoint" {
   default     = ""
 }
 
+variable "otlp_insecure" {
+  description = "Send traces over plaintext gRPC (dev collectors only)."
+  type        = bool
+  default     = false
+}
+
+variable "vllm_url" {
+  description = "Tier-2 vLLM endpoint (OpenAI-compatible); empty = heuristic only."
+  type        = string
+  default     = ""
+}
+
+variable "vllm_model" {
+  description = "Tier-2 vLLM model name."
+  type        = string
+  default     = "deepseek-coder"
+}
+
+variable "github_api_url" {
+  description = "GitHub API base URL for the reporter (only for GitHub Enterprise)."
+  type        = string
+  default     = ""
+}
+
+variable "enforcement_mode" {
+  description = "Reporter merge-gate posture: enforce (rejected blocks) | shadow (non-blocking)."
+  type        = string
+  default     = "enforce"
+  validation {
+    condition     = contains(["enforce", "shadow"], var.enforcement_mode)
+    error_message = "enforcement_mode must be one of: enforce, shadow."
+  }
+}
+
+variable "premium_enabled" {
+  description = "Enable the tier-3 premium consensus (also needs a provider API key)."
+  type        = bool
+  default     = false
+}
+
+variable "premium_anthropic_model" {
+  description = "Tier-3 Anthropic model id."
+  type        = string
+  default     = "claude-sonnet-4-6"
+}
+
+variable "premium_gemini_model" {
+  description = "Tier-3 Gemini model id."
+  type        = string
+  default     = "gemini-2.5-pro"
+}
+
 variable "github_token" {
   description = "GitHub token for the reporter notifiers (optional)."
   type        = string
@@ -80,6 +132,27 @@ variable "github_token" {
 
 variable "webhook_secret" {
   description = "HMAC secret for the ingestion Git webhook (optional but recommended)."
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "webhook_url" {
+  description = "Slack-compatible webhook URL for the reporter (secret-bearing)."
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "anthropic_api_key" {
+  description = "Tier-3 Anthropic API key (premium consensus)."
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "gemini_api_key" {
+  description = "Tier-3 Gemini API key (premium consensus)."
   type        = string
   default     = ""
   sensitive   = true
