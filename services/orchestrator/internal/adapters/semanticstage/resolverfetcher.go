@@ -3,6 +3,7 @@ package semanticstage
 import (
 	"context"
 
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
@@ -22,7 +23,11 @@ type ResolverFetcher struct {
 // NewResolverFetcher dials the resolver at addr (lazy connection).
 func NewResolverFetcher(addr string, options ...grpc.DialOption) (*ResolverFetcher, error) {
 	dialOpts := append(
-		[]grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())},
+		[]grpc.DialOption{
+			grpc.WithTransportCredentials(insecure.NewCredentials()),
+			// Propagate trace context to the resolver and span the call (D-032).
+			grpc.WithStatsHandler(otelgrpc.NewClientHandler()),
+		},
 		options...,
 	)
 	conn, err := grpc.NewClient(addr, dialOpts...)

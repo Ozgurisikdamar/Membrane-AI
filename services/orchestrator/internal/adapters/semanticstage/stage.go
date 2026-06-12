@@ -15,6 +15,7 @@ import (
 	"net/http"
 
 	"github.com/google/uuid"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
 	"github.com/Ozgurisikdamar/Membrane-AI/pkg/errs"
 	"github.com/Ozgurisikdamar/Membrane-AI/services/orchestrator/internal/domain"
@@ -74,8 +75,10 @@ type Stage struct {
 // itself sets no timeout.
 func New(baseURL string, fetcher ContextFetcher) *Stage {
 	return &Stage{
-		url:     baseURL + "/v1/semantic/evaluate",
-		client:  &http.Client{},
+		url: baseURL + "/v1/semantic/evaluate",
+		// otelhttp transport propagates trace context to the semantic service
+		// and spans the call (D-032); the Saga deadline still arrives via ctx.
+		client:  &http.Client{Transport: otelhttp.NewTransport(http.DefaultTransport)},
 		fetcher: fetcher,
 	}
 }

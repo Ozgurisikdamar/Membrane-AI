@@ -7,6 +7,7 @@ require (
 	github.com/Ozgurisikdamar/Membrane-AI/proto v0.0.0
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.7.4
+	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.69.0
 	google.golang.org/grpc v1.81.1
 )
 

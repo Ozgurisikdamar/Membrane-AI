@@ -88,8 +88,11 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done.
       - [x] **`pkg/observability` (D-032)**: OTLP/gRPC trace exporter gated on endpoint, W3C
             propagation, Kafka header carrier, slog bridge; wired into all 5 Go services with
             cross-Kafka distributed tracing (ingestion→orchestrator), Helm + compose OTLP wiring
-      - [ ] otelgrpc/otelhttp auto-instrumentation, OTel metrics, Python tracing, outbox-side
-            propagation, bundled collector + dashboards, SLOs
+      - [x] **otelgrpc/otelhttp auto-instrumentation** (increment 2): orchestrator gRPC clients +
+            ingestion/analyzer/resolver gRPC servers + orchestrator→semantic and ingestion-webhook
+            HTTP — analyzer/resolver/semantic hops now join the trace
+      - [ ] OTel metrics, Python (semantic) tracing, outbox-side verdict propagation, bundled
+            collector + dashboards, SLOs
 - [~] **Deployment**: SaaS / VPC / air-gapped — Terraform + Helm; multi-arch images; static client packaging
       - [x] **Container images (D-029)**: parameterized distroless Dockerfile for all Go services +
             python-slim semantic; `task build:images`; `docker-compose.full.yml` all-container profile

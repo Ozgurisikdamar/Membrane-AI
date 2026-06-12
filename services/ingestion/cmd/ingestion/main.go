@@ -14,6 +14,8 @@ import (
 	"syscall"
 	"time"
 
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"google.golang.org/grpc"
 
 	"github.com/Ozgurisikdamar/Membrane-AI/pkg/health"
@@ -75,12 +77,17 @@ func run(log *slog.Logger) error {
 
 	enqueue := app.NewEnqueueSubmission(publisher, idgen.UUID{}, idgen.SystemClock{})
 
-	grpcSrv := grpc.NewServer()
+	grpcSrv := grpc.NewServer(grpc.StatsHandler(otelgrpc.NewServerHandler()))
 	ingestionv1.RegisterIngestionServiceServer(grpcSrv, grpcserver.New(enqueue))
 
 	webhookMux := http.NewServeMux()
 	webhookMux.Handle("/webhook", httpwebhook.New(enqueue, cfg.WebhookSecret))
-	httpSrv := &http.Server{Addr: cfg.HTTPAddr, Handler: webhookMux, ReadHeaderTimeout: 5 * time.Second}
+	// otelhttp opens the originating server span for inbound webhooks (D-032).
+	httpSrv := &http.Server{
+		Addr:              cfg.HTTPAddr,
+		Handler:           otelhttp.NewHandler(webhookMux, "webhook"),
+		ReadHeaderTimeout: 5 * time.Second,
+	}
 	healthSrv := &http.Server{Addr: cfg.HealthAddr, Handler: healthH.Mux(), ReadHeaderTimeout: 5 * time.Second}
 
 	errc := make(chan error, 3)

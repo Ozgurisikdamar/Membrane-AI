@@ -30,9 +30,14 @@ The user pushes manually (`git push` in their own terminal). Check pending:
   `MEMBRANE_<SVC>_OTLP_ENDPOINT`/`_OTLP_INSECURE`. **Distributed trace across Kafka**: ingestion
   opens the span + stamps W3C headers on the submission record; orchestrator extracts + spans the
   Saga (one trace ingestion→orchestrator). Helm `infra.otlpEndpoint` + compose `MEMBRANE_OTLP_ENDPOINT`.
-- **Deferred (next increment, not gaps)**: otelgrpc/otelhttp auto-instrumentation, OTel metrics,
-  Python (semantic) tracing, verdict-side propagation through the outbox (reporter currently starts
-  a fresh trace), a bundled collector + dashboards.
+- **Auto-instrumentation done (increment 2)**: otelgrpc client handlers on the orchestrator's
+  analyzer/resolver dials + server handlers on ingestion/analyzer/resolver gRPC servers; otelhttp on
+  the orchestrator→semantic client + the ingestion webhook server. Analyzer/resolver/semantic hops
+  now join the trace (verified: global W3C propagator threads them; manual Kafka spans nest, no
+  double-count; bufconn/httptest tests green).
+- **Deferred (next increment, not gaps)**: OTel metrics, Python (semantic) tracing, verdict-side
+  propagation through the outbox (reporter currently starts a fresh trace), a bundled collector +
+  dashboards.
 
 - **Premium tier-3 consensus done (D-031)**: `semantic/adapters/premium_consensus.py` — Claude
   Sonnet 4.6 (Anthropic Messages API) + Gemini (generateContent) via httpx, NO SDK. `DualModelConsensus`

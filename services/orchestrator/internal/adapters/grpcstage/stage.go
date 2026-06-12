@@ -7,6 +7,7 @@ package grpcstage
 import (
 	"context"
 
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
@@ -35,7 +36,11 @@ func WithDialOption(o grpc.DialOption) Option {
 // New dials the analyzer at addr (non-blocking; the connection is established
 // lazily on first use).
 func New(addr string, options ...Option) (*Stage, error) {
-	dialOpts := []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
+	dialOpts := []grpc.DialOption{
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		// Propagate trace context to the analyzer and span the call (D-032).
+		grpc.WithStatsHandler(otelgrpc.NewClientHandler()),
+	}
 	for _, o := range options {
 		o(&dialOpts)
 	}

@@ -12,6 +12,7 @@ import (
 	"syscall"
 	"time"
 
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
 
 	"github.com/Ozgurisikdamar/Membrane-AI/pkg/health"
@@ -52,7 +53,7 @@ func run(log *slog.Logger) error {
 
 	analyze := app.NewAnalyzeDiff(domain.NewSecretDetector(), domain.NewRiskyPatternDetector())
 
-	grpcSrv := grpc.NewServer()
+	grpcSrv := grpc.NewServer(grpc.StatsHandler(otelgrpc.NewServerHandler()))
 	analyzerv1.RegisterAnalyzerServiceServer(grpcSrv, grpcserver.New(analyze))
 
 	healthH := health.New(2 * time.Second)
