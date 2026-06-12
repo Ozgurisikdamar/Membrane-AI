@@ -165,6 +165,7 @@ services:
     healthEnv: MEMBRANE_REPORTER_HEALTH_ADDR
     env:
       MEMBRANE_REPORTER_KAFKA_BROKERS: "{{ .Values.infra.kafkaBrokers }}"
+      MEMBRANE_REPORTER_REDIS_ADDR: "{{ .Values.infra.redisAddr }}"
       MEMBRANE_REPORTER_GITHUB_API_URL: "{{ .Values.infra.githubApiUrl }}"
       MEMBRANE_REPORTER_OTLP_ENDPOINT: "{{ .Values.infra.otlpEndpoint }}"
       MEMBRANE_REPORTER_OTLP_INSECURE: "{{ .Values.infra.otlpInsecure }}"

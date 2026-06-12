@@ -184,8 +184,11 @@ services:
         condition: service_healthy
       topics:
         condition: service_completed_successfully
+      redis:
+        condition: service_healthy
     environment:
       MEMBRANE_REPORTER_KAFKA_BROKERS: redpanda:9092
+      MEMBRANE_REPORTER_REDIS_ADDR: redis:6379
       MEMBRANE_REPORTER_WEBHOOK_URL: ${MEMBRANE_REPORTER_WEBHOOK_URL:-}
       MEMBRANE_REPORTER_GITHUB_TOKEN: ${MEMBRANE_REPORTER_GITHUB_TOKEN:-}
       MEMBRANE_REPORTER_GITHUB_API_URL: ${MEMBRANE_REPORTER_GITHUB_API_URL:-}

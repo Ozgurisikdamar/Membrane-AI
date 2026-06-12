@@ -18,6 +18,7 @@ import (
 	"github.com/Ozgurisikdamar/Membrane-AI/services/reporter/internal/adapters/kafkabus"
 	"github.com/Ozgurisikdamar/Membrane-AI/services/reporter/internal/adapters/memorylog"
 	"github.com/Ozgurisikdamar/Membrane-AI/services/reporter/internal/adapters/notify"
+	"github.com/Ozgurisikdamar/Membrane-AI/services/reporter/internal/adapters/redislog"
 	"github.com/Ozgurisikdamar/Membrane-AI/services/reporter/internal/app"
 	"github.com/Ozgurisikdamar/Membrane-AI/services/reporter/internal/config"
 	"github.com/Ozgurisikdamar/Membrane-AI/services/reporter/internal/ports"
@@ -61,7 +62,18 @@ func run(log *slog.Logger) error {
 		)
 		log.Info("github notifiers enabled (commit status + PR comment)")
 	}
-	dispatch := app.NewDispatchVerdict(memorylog.New(), notifiers...)
+	// Cross-replica idempotency when Redis is configured; in-memory otherwise.
+	var deliveryLog ports.DeliveryLog = memorylog.New()
+	var redisLog *redislog.Log
+	if cfg.RedisAddr != "" {
+		redisLog = redislog.New(cfg.RedisAddr, 0)
+		deliveryLog = redisLog
+		defer func() { _ = redisLog.Close() }()
+		log.Info("redis delivery log enabled (multi-replica idempotency)", "addr", cfg.RedisAddr)
+	} else {
+		log.Warn("in-memory delivery log (single replica) — set MEMBRANE_REPORTER_REDIS_ADDR to scale out")
+	}
+	dispatch := app.NewDispatchVerdict(deliveryLog, notifiers...)
 
 	consumer, err := kafkabus.NewConsumer(cfg.KafkaBrokers, cfg.VerdictTopic, cfg.ConsumerGroup, dispatch, log)
 	if err != nil {
@@ -71,6 +83,9 @@ func run(log *slog.Logger) error {
 
 	healthH := health.New(2 * time.Second)
 	healthH.Register("kafka", consumer.Ping)
+	if redisLog != nil {
+		healthH.Register("redis", redisLog.Ping)
+	}
 	healthSrv := &http.Server{Addr: cfg.HealthAddr, Handler: healthH.Mux(), ReadHeaderTimeout: 5 * time.Second}
 
 	errc := make(chan error, 2)

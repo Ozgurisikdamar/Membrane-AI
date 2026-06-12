@@ -67,7 +67,8 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done.
             live & E2E-proven** (`membrane-ai/governance` context)
       - [x] **PR-comment adapter** (`github-pr-comment`): markdown comment with fenced findings on
             `issues/{pr}/comments` when `pr_number` present; same token family, httptest-covered
-      - [ ] Redis-backed delivery log for multi-replica
+      - [x] **Redis-backed delivery log** (`redislog`, SET NX + TTL): cross-replica idempotency,
+            enabled by `MEMBRANE_REPORTER_REDIS_ADDR` (memory fallback otherwise); miniredis-tested
       - [ ] IDE inline-fix channel (with the IDE extension, P3)
 - [x] **Accuracy & evaluation harness** (`eval/`): labeled golden corpus → rule-level
       precision/recall/F1 + clean-case FP-rate over `pkg/scan`; `task eval` (human report) and a

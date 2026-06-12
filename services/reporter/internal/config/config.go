@@ -15,6 +15,9 @@ type Config struct {
 	KafkaBrokers  []string
 	VerdictTopic  string
 	ConsumerGroup string
+	// RedisAddr enables the cross-replica delivery log; empty = in-memory
+	// (single-replica) idempotency.
+	RedisAddr string
 	// WebhookURL is the Slack-compatible destination; empty disables the
 	// webhook notifier (the log notifier is always on).
 	WebhookURL string
@@ -37,6 +40,7 @@ func Load() (Config, error) {
 		KafkaBrokers:    splitCSV(l.String("KAFKA_BROKERS", "localhost:9092")),
 		VerdictTopic:    l.String("VERDICT_TOPIC", "code.verdict.v1"),
 		ConsumerGroup:   l.String("CONSUMER_GROUP", "membrane-reporter"),
+		RedisAddr:       l.String("REDIS_ADDR", ""),
 		WebhookURL:      l.String("WEBHOOK_URL", ""),
 		GitHubToken:     l.String("GITHUB_TOKEN", ""),
 		GitHubAPIURL:    l.String("GITHUB_API_URL", ""),
