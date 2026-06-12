@@ -92,7 +92,9 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done.
 - [x] **IDE extension** (`clients/vscode`, VS Code / Cursor): runs the `membrane` CLI over the
       workspace and surfaces findings as editor diagnostics (scan-on-save); shells out to the same
       static binary as CI (no second detector); `tsc` compiles clean
-- [ ] **SCM integration** (GitHub/GitLab) end-to-end
+- [x] **SCM integration** (GitHub/GitLab): outbound commit-status + PR-comment gating E2E-proven
+      (D-025); GitHub App manifest (`deploy/github-app/manifest.json`) + a drop-in CLI PR-gate
+      workflow (`membrane-scan.yml`); see docs/SCM-INTEGRATION.md
 - [x] **Shadow-mode → enforcement merge gates** (D-035): reporter `ENFORCEMENT_MODE` — `shadow`
       downgrades a rejection to a non-blocking neutral commit status (observe first), `enforce`
       blocks the merge; rendered in the report title, table-tested
@@ -115,7 +117,10 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done.
             posture-aware (D-011), `terraform validate` green
       - [x] **Multi-arch buildx publish**: `task publish:images` (amd64+arm64 → ghcr) + CI
             `publish-images` job on `v*` tags
-- [ ] **Compliance prep** (SOC 2 / ISO 27001 / 42001), docs & landing site
+- [x] **Compliance prep** (SOC 2 / ISO 27001 / 42001): control-mapping doc tying implemented
+      controls (audit logs, masking, least-privilege pods, postures, supply-chain) to each framework
+      (docs/COMPLIANCE.md) + a self-contained landing page (docs/landing/index.html, served 200,
+      content-verified)
 
 > The 20 GitHub board items map onto these phases; when you finish one, set its board card to Done and
 > tick it here. Keep both in sync.

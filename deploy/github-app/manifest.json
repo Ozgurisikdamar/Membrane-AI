@@ -1,0 +1,21 @@
+{
+  "name": "MEMBRANE.AI",
+  "description": "Real-time security and architectural guardrails for AI-generated code. Gates pull requests with the membrane-ai/governance commit status.",
+  "url": "https://github.com/Ozgurisikdamar/Membrane-AI",
+  "public": false,
+  "hook_attributes": {
+    "url": "https://REPLACE-WITH-YOUR-INGESTION-HOST/webhook",
+    "active": true
+  },
+  "default_permissions": {
+    "metadata": "read",
+    "contents": "read",
+    "pull_requests": "write",
+    "statuses": "write",
+    "checks": "write"
+  },
+  "default_events": [
+    "push",
+    "pull_request"
+  ]
+}

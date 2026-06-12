@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MEMBRANE.AI — guardrails for AI-generated code</title>
+<style>
+  :root {
+    --ink: #1f2a37; --muted: #5b6776; --line: #e7e3da; --bg: #f6f3ec;
+    --card: #fffdf8; --accent: #0f766e; --accent-soft: #d7efe9;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 17px/1.65 -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  main { max-width: 960px; margin: 0 auto; padding: 0 24px; }
+  .hero { text-align: center; padding: 84px 24px 56px; }
+  .badge {
+    display: inline-block; background: var(--accent-soft); color: var(--accent);
+    font-size: 13px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase;
+    padding: 6px 14px; border-radius: 999px; margin-bottom: 22px;
+  }
+  h1 { font-size: 44px; line-height: 1.1; margin: 0 0 18px; letter-spacing: -0.02em; }
+  h1 .grad { color: var(--accent); }
+  .lede { font-size: 20px; color: var(--muted); max-width: 720px; margin: 0 auto 30px; }
+  .cta {
+    display: inline-block; background: var(--accent); color: #fff; text-decoration: none;
+    font-weight: 600; padding: 13px 26px; border-radius: 10px; margin: 6px;
+  }
+  .cta.ghost { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
+  section { padding: 28px 0; }
+  h2 { font-size: 27px; margin: 0 0 22px; letter-spacing: -0.01em; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 18px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 22px 24px; }
+  .card h3 { margin: 0 0 8px; font-size: 18px; }
+  .card p { margin: 0; color: var(--muted); font-size: 15px; }
+  .flow { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+  .step { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; text-align: center; }
+  .step .n { color: var(--accent); font-weight: 700; font-size: 13px; }
+  .step .t { font-weight: 600; margin-top: 4px; }
+  .step .d { color: var(--muted); font-size: 13px; margin-top: 4px; }
+  footer { text-align: center; color: var(--muted); font-size: 14px; padding: 48px 24px; border-top: 1px solid var(--line); margin-top: 40px; }
+  code { background: var(--card); border: 1px solid var(--line); border-radius: 6px; padding: 2px 7px; font: 14px ui-monospace, Consolas, monospace; }
+</style>
+</head>
+<body>
+<main>
+  <div class="hero">
+    <span class="badge">AI code governance</span>
+    <h1>An immune system for <span class="grad">AI-generated code</span></h1>
+    <p class="lede">MEMBRANE.AI puts real-time security and architectural guardrails at the point of
+      generation — so the code your agents write is reviewed, masked of secrets, and gated before it
+      ever merges.</p>
+    <a class="cta" href="https://github.com/Ozgurisikdamar/Membrane-AI">Get started</a>
+    <a class="cta ghost" href="#how">See how it works</a>
+  </div>
+
+  <section>
+    <h2>What it does</h2>
+    <div class="grid">
+      <div class="card"><h3>Secret &amp; risk scanning</h3><p>Deterministic detectors catch leaked
+        credentials and risky patterns and mask them before any LLM tier sees the diff.</p></div>
+      <div class="card"><h3>Three-tier cost gate</h3><p>Cache → local model → premium dual-model
+        consensus (Claude Sonnet 4.6 + Gemini). You pay for deep review only on real risk.</p></div>
+      <div class="card"><h3>Merge gating</h3><p>Commit statuses and PR comments block risky changes —
+        run shadow-mode first, then flip to enforcement when you trust it.</p></div>
+      <div class="card"><h3>MCP &amp; package firewall</h3><p>Governs agent tool calls, blocks typosquatted
+        dependencies, and discovers shadow-AI usage across your org.</p></div>
+      <div class="card"><h3>Runs everywhere</h3><p>Static CLI, IDE extension, and multi-arch containers —
+        SaaS, private VPC, or fully air-gapped.</p></div>
+      <div class="card"><h3>Observable &amp; provable</h3><p>Distributed tracing, metrics, an audit trail,
+        and a measured accuracy SLO (precision / recall / false-positive rate).</p></div>
+    </div>
+  </section>
+
+  <section id="how">
+    <h2>How it works</h2>
+    <div class="flow">
+      <div class="step"><div class="n">1</div><div class="t">Ingest</div><div class="d">Diff arrives via webhook, gRPC, CLI or IDE</div></div>
+      <div class="step"><div class="n">2</div><div class="t">Mask</div><div class="d">Secrets redacted before any model</div></div>
+      <div class="step"><div class="n">3</div><div class="t">Analyze</div><div class="d">Detectors + RAG-grounded semantic review</div></div>
+      <div class="step"><div class="n">4</div><div class="t">Decide</div><div class="d">Approve · reject · needs-review</div></div>
+      <div class="step"><div class="n">5</div><div class="t">Gate</div><div class="d">Commit status, PR comment, audit</div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Try the Code Sweeper</h2>
+    <p class="lede" style="margin-left:0;text-align:left">A single offline binary — scan any repo and get a
+      Generative-AI Technical-Debt Report:</p>
+    <p><code>membrane scan . --report html --out debt.html</code></p>
+  </section>
+
+  <footer>
+    MEMBRANE.AI — real-time security &amp; architectural guardrails for AI coding agents.<br>
+    <a href="https://github.com/Ozgurisikdamar/Membrane-AI">github.com/Ozgurisikdamar/Membrane-AI</a>
+  </footer>
+</main>
+</body>
+</html>
