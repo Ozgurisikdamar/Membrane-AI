@@ -3,7 +3,9 @@
 > **On "devam et": read this file, then do "Next up". Update this file before the session ends.**
 > Keep it short and current — this is state, not history.
 
-_Last updated: 2026-06-12 — session: P3 part 7 (OpenTelemetry observability, D-032)._
+_Last updated: 2026-06-12 — session: P3 completion sweep (eval harness, packaging, Terraform,
+multi-arch, Redis delivery log, MCP gateway, shadow→enforce, VS Code ext, SCM, compliance, landing,
+dashboards)._
 
 ## Push policy
 
@@ -20,8 +22,20 @@ The user pushes manually (`git push` in their own terminal). Check pending:
 
 ## Current state
 
-**P0 ✓ P1 ✓ P2 ✓ — P3 in flight.** `task ci` green: 8 Go modules + Python (36 pytest);
-`task helm:lint` green (helm lint + template + kubeconform).
+**P0 ✓ P1 ✓ P2 ✓ P3 ✓ — every buildable roadmap item is complete.** `task ci` green: 10 Go modules
++ Python (36 pytest); `task helm:lint` green; `task eval` green (golden corpus P/R 1.0, FP-rate 0).
+The only open ROADMAP items are runtime/live-tuning that need resources MEMBRANE.AI doesn't control —
+**real embeddings** (an embedding-model endpoint), **real vLLM** (a GPU deployment), **real premium
+keys** (the user's Anthropic/Gemini keys) — plus the optional **IDE inline-fix** deepening. All the
+code/swap-points for those are in place.
+
+This-session additions (all tested + committed locally, push pending): eval harness (`eval/`),
+CLI packaging (`.goreleaser.yaml`, D-033) + multi-arch buildx publish, reporter **Redis delivery
+log**, **Terraform** module (`deploy/terraform`), **MCP gateway** service (`services/gateway`,
+D-034), **shadow→enforce** merge gate (D-035), **VS Code extension** (`clients/vscode`, compiles),
+**SCM** integration (GitHub App manifest + CLI PR-gate workflow), **compliance** doc + **landing**
+page, observability **inc 2/3** (otelgrpc/otelhttp + metrics + Python tracing + outbox trace +
+collector) and a **Grafana dashboard**.
 
 - **Observability foundation done (D-032)**: `pkg/observability` — `Setup` installs the W3C
   propagator always + an OTLP/gRPC trace exporter only when `OTLP_ENDPOINT` is set (empty = no-op,
@@ -40,8 +54,8 @@ The user pushes manually (`git push` in their own terminal). Check pending:
   `MEMBRANE_SEMANTIC_OTLP_ENDPOINT`); **outbox carries the trace** (`outbox.headers` JSONB → relay
   stamps record headers → reporter rejoins, so the full ingestion→orchestrator→reporter trace is one);
   opt-in bundled collector in full compose (`--profile observability`, OTLP→debug).
-- **Observability is functionally complete.** Only Grafana/Tempo/Prometheus dashboards + SLOs remain
-  (ops polish, not code).
+- **Observability complete.** Grafana dashboard + SLOs in `deploy/observability/` (live wiring needs
+  a running Tempo/Prometheus/Grafana).
 
 - **Premium tier-3 consensus done (D-031)**: `semantic/adapters/premium_consensus.py` — Claude
   Sonnet 4.6 (Anthropic Messages API) + Gemini (generateContent) via httpx, NO SDK. `DualModelConsensus`
@@ -99,14 +113,18 @@ The user pushes manually (`git push` in their own terminal). Check pending:
 - Reporter: webhook + commit-status + PR-comment notifiers, idempotent (D-025/D-028).
 - Semantic tier-2 real-model-ready: `VLLMLocalModel` + `FallbackLocalModel` (D-028), heuristic default.
 
-## Next up  (P3 continuation; see docs/ROADMAP.md)
+## Next up  (only resource-gated live-tuning + optional deepenings remain — see docs/ROADMAP.md)
 
-1. **Observability increment 2**: otelgrpc/otelhttp auto-instrumentation (so analyzer/resolver/
-   semantic hops join the trace), OTel metrics, Python (semantic) tracing, outbox-side verdict
-   propagation, a bundled collector in compose + a dashboard.
-2. **CLI packaging matrix** (winget/brew/deb/rpm/tarball) — release engineering for the Code Sweeper.
-3. **Accuracy & evaluation harness** (golden datasets, precision/recall, FP-rate SLO) — the quality
-   bar for the analysis pipeline.
+All buildable roadmap items are done. What's left needs resources the project doesn't control:
+
+1. **Real model wiring/tuning** (needs the user's infra/keys): point the semantic tier at a real
+   vLLM deployment and the premium tier at real Anthropic/Gemini keys, then tune the prompts against
+   live output; swap the resolver's stub embedder for a real embedding-model endpoint. All
+   adapters/`ports.Embedder` swap-points are in place — this is config + live tuning, not new code.
+2. **Live observability stack**: stand up Tempo/Prometheus/Grafana and import
+   `deploy/observability/grafana-dashboard.json` (the exporters + dashboard JSON are done).
+3. **Optional deepenings**: IDE inline-fix channel; a native GitHub-event ingestion adapter (parse
+   push/PR + fetch the diff) to complement the CLI PR-gate; real tier-3 key-handling via a vault.
 
 ## How to verify
 
