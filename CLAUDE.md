@@ -40,6 +40,7 @@ When the user says **"devam et"** (or "continue", or gives no specific instructi
 | **Push policy** | Local commits anytime; `git push` only on explicit **"pushla"**. |
 | **History** | Never rewrite published history or touch other contributors' commits. |
 | **Quality gates** | `task lint` + `task test` must pass before any commit. No commented-out code, no `TODO` without a ROADMAP/issue reference, no skipped tests. |
+| **No CI** | GitHub Actions **never runs on this account** (measured 2026-09-15: 55/55 `startup_failure`, `workflow_dispatch` included). `task lint`/`task test` on your machine is the only gate — never claim "CI green", and never add a `schedule:` trigger. See `docs/DECISIONS.md` **D-036**. |
 | **Standards** | `docs/ENGINEERING-STANDARDS.md` is binding: hexagonal services, SOLID, DI, typed errors, transactional outbox, table-driven tests, ≥80% domain/app coverage. |
 | **Secrets** | Never commit tokens/keys; `.env*` is gitignored. If a GitHub op fails (401/403/404-on-private), ask the user for a **classic PAT with `repo`+`project` scopes** (fine-grained PATs were rejected), `gh auth login --with-token`, and remind them to revoke it afterwards. |
 
