@@ -3,7 +3,9 @@
 > **On "devam et": read this file, then do "Next up". Update this file before the session ends.**
 > Keep it short and current — this is state, not history.
 
-_Last updated: 2026-06-12 — session: P3 completion sweep (eval harness, packaging, Terraform,
+_Last updated: 2026-09-15 — session: recorded **D-036** (GitHub Actions never runs on this
+account; `task lint`/`task test` is the only gate). No code touched; roadmap state unchanged.
+Last substantive session: 2026-06-12 — P3 completion sweep (eval harness, packaging, Terraform,
 multi-arch, Redis delivery log, MCP gateway, shadow→enforce, VS Code ext, SCM, compliance, landing,
 dashboards)._
 
@@ -21,7 +23,8 @@ was refuted (codebase held up). All green after fixes.
 
 The user pushes manually (`git push` in their own terminal). Check pending:
 `git rev-list --count origin/main..HEAD`. `.github/` gitignored (D-026); CI source = `deploy/ci/github-ci.yml`
-— **it gained an `images` job this session; mirror it to GitHub via the web UI when convenient.**
+— it gained an `images` job in the 2026-06-12 session. ⚠️ **Mirroring it to GitHub buys nothing (D-036, measured 2026-09-15):** Actions never runs on this account (55/55 `startup_failure`, `workflow_dispatch` included), so the web-UI step would only produce a red run with no job log. Do it for future-proofing if you like, but never treat it as a gate.
+**2026-09-15 exception:** the user said "pushla"/"ana dala pushla", so commit `6d2ef34` (D-036 + CLAUDE.md hard rule) was pushed and `main` fast-forwarded — no force push, no history rewrite.
 
 ## ⚠️ Standing gotchas
 
@@ -29,6 +32,12 @@ The user pushes manually (`git push` in their own terminal). Check pending:
 - **Stray machine `GOWORK`** → inline `GOWORK=off` only (task `env:` blocks don't override it).
 - **Docker** engine needs a manual Docker Desktop start sometimes; never block on it.
 - **buf** = prebuilt exe; **`-race`** = CI-only; Python venv via `task setup:py`.
+- **⛔ There is no CI.** GitHub Actions has never run on this account — 55/55 runs ended in
+  `startup_failure`, instantly, `path: BuildFailed` (the run never reaches the workflow file),
+  `workflow_dispatch` included. It fails RED but with no job log, so it reads like broken YAML
+  and invites debugging the wrong thing. Cause is account-level (billing). Never claim "CI
+  green"; never add a `schedule:` trigger. The customer-facing template
+  `deploy/github-app/membrane-scan.yml` is exempt — it runs on the customer's account. (D-036)
 
 ## Current state
 
