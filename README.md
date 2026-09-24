@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="https://capsule-render.vercel.app/api?type=waving&color=0:07111F,45:0F766E,100:14B8A6&height=230&section=header&text=MEMBRANE.AI&fontSize=56&fontColor=FFFFFF&animation=fadeIn&fontAlignY=38&desc=Architectural%20%26%20security%20guardrails%20for%20AI-generated%20code&descAlignY=60&descSize=18" width="100%" alt="MEMBRANE.AI"/>
+<img src="https://capsule-render.vercel.app/api?type=waving&color=0:07111F,45:0F766E,100:14B8A6&height=230&section=header&text=MEMBRANE.AI&fontSize=56&fontColor=FFFFFF&animation=fadeIn&fontAlignY=38&desc=Architectural%20and%20security%20guardrails%20for%20AI-generated%20code&descAlignY=60&descSize=18" width="100%" alt="MEMBRANE.AI"/>
 
 <br/>
 
