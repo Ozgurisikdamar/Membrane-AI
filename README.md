@@ -124,7 +124,7 @@ The platform is designed for masked SaaS, private VPC and fully air-gapped envir
 
 <div align="center">
 
-<img src="docs/report/media/fig01_topology.png" alt="MEMBRANE.AI system topology" width="95%"/>
+<img src="docs/report/media/fig01_topology.svg" alt="MEMBRANE.AI system topology" width="95%"/>
 
 <sub>System topology — developer edge, event-driven control plane, analysis services and enterprise integrations.</sub>
 

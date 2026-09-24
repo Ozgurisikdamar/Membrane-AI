@@ -82,7 +82,7 @@ The result is a single control plane that a developer experiences as faster (few
 
 MEMBRANE.AI is a decoupled, asynchronous, event-driven microservices platform built for ultra-low edge latency (target < 150 ms) and high write throughput.
 
-![Figure 1 — MEMBRANE.AI end-to-end system topology. (width=5.4)](media/fig01_topology.png)
+![Figure 1 — MEMBRANE.AI end-to-end system topology. (width=5.4)](media/fig01_topology.svg)
 
 Traffic enters through AWS Route 53 (latency-based routing), an Application Load Balancer fronted by AWS Shield, and an Envoy gateway that terminates TLS and enforces rate limits and JWT auth. Submissions are published to a Redpanda/Kafka topic (`code.submission.v1`), partitioned by organization ID so each customer's stream is strictly ordered and isolated, with tiered storage on S3 for audit. A Go orchestrator drives the analysis pipeline; a Python/FastAPI controller fans work across local and cloud models; Redis and Aurora PostgreSQL (with `pgvector`) provide cache and durable state; and a Go remediation daemon streams results back to the IDE, PR and enterprise SIEM.
 
