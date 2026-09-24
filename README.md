@@ -50,24 +50,7 @@ It is designed as an autonomous **architectural & security immune system** for A
 
 <div align="center">
 
-### The gap MEMBRANE.AI closes
-
-```text
-Traditional flow
-
-AI Agent  ──────>  Generated Code  ──────>  Commit / PR  ──────>  SAST
-                         ▲
-                         └── architectural drift, unsafe dependencies,
-                             semantic flaws and agent-specific threats
-                             may already be embedded here
-
-
-MEMBRANE.AI flow
-
-Prompt / MCP  ──>  Context + Policy  ──>  AI Agent  ──>  Diff Verification  ──>  CI/CD Gate
-      │                  │                              │
-      └──── govern ──────┴──────── verify ─────────────┴──── enforce
-```
+<img src="docs/assets/membrane-gap.svg" alt="The gap MEMBRANE.AI closes — traditional AI coding flow compared with governed MEMBRANE.AI flow" width="100%"/>
 
 </div>
 
