@@ -3,73 +3,195 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Real-time security and architectural guardrails for AI coding agents.">
 <title>MEMBRANE.AI — guardrails for AI-generated code</title>
 <style>
   :root {
-    --ink: #1f2a37; --muted: #5b6776; --line: #e7e3da; --bg: #f6f3ec;
+    --ink: #17212e; --muted: #56616f; --line: #e5e0d4; --bg: #f6f3ec;
     --card: #fffdf8; --accent: #0f766e; --accent-soft: #d7efe9;
+    --sans: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+    color-scheme: light;
   }
   * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
   body {
     margin: 0; background: var(--bg); color: var(--ink);
-    font: 17px/1.65 -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font: 17px/1.65 var(--sans); -webkit-font-smoothing: antialiased;
   }
-  main { max-width: 960px; margin: 0 auto; padding: 0 24px; }
-  .hero { text-align: center; padding: 84px 24px 56px; }
+  a { color: var(--accent); text-underline-offset: 3px; }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 32px; }
+
+  /* masthead: header + hero share one soft teal glow on a faint grid */
+  .masthead { position: relative; isolation: isolate; }
+  .masthead::before, .masthead::after { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; }
+  .masthead::before {
+    background:
+      radial-gradient(620px 340px at 50% 30%, rgba(15, 118, 110, 0.11), transparent 70%),
+      radial-gradient(420px 260px at 82% 72%, rgba(14, 116, 144, 0.07), transparent 70%),
+      radial-gradient(420px 260px at 16% 78%, rgba(15, 118, 110, 0.06), transparent 70%);
+    -webkit-mask-image: linear-gradient(to bottom, #000 60%, transparent);
+            mask-image: linear-gradient(to bottom, #000 60%, transparent);
+  }
+  .masthead::after {
+    background-image:
+      linear-gradient(rgba(15, 118, 110, 0.07) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(15, 118, 110, 0.07) 1px, transparent 1px);
+    background-size: 48px 48px; background-position: center -1px;
+    -webkit-mask-image: radial-gradient(ellipse 58% 70% at 50% 38%, #000 18%, transparent 78%);
+            mask-image: radial-gradient(ellipse 58% 70% at 50% 38%, #000 18%, transparent 78%);
+  }
+
+  .top .wrap { display: flex; align-items: center; justify-content: space-between; height: 72px; }
+  .brand {
+    display: flex; align-items: center; gap: 10px; color: var(--ink); text-decoration: none;
+    font-weight: 700; font-size: 15px; letter-spacing: 0.06em;
+  }
+  .brand svg { width: 30px; height: 30px; flex: none; }
+  .brand .ai { color: var(--accent); }
+  .nav { display: flex; align-items: center; gap: 30px; font-size: 15px; }
+  .nav a { color: var(--muted); text-decoration: none; }
+  .nav a:hover { color: var(--ink); }
+  .nav a.gh {
+    color: var(--ink); font-weight: 600; background: var(--card); border: 1px solid var(--line);
+    padding: 7px 15px; border-radius: 999px;
+  }
+
+  .hero { text-align: center; padding: 84px 0 100px; }
   .badge {
-    display: inline-block; background: var(--accent-soft); color: var(--accent);
-    font-size: 13px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase;
-    padding: 6px 14px; border-radius: 999px; margin-bottom: 22px;
+    display: inline-flex; align-items: center; gap: 9px; background: var(--accent-soft); color: var(--accent);
+    border: 1px solid rgba(15, 118, 110, 0.16); font-size: 12.5px; font-weight: 600; letter-spacing: 0.07em;
+    text-transform: uppercase; padding: 6px 15px; border-radius: 999px; margin-bottom: 30px;
   }
-  h1 { font-size: 44px; line-height: 1.1; margin: 0 0 18px; letter-spacing: -0.02em; }
-  h1 .grad { color: var(--accent); }
-  .lede { font-size: 20px; color: var(--muted); max-width: 720px; margin: 0 auto 30px; }
+  .badge::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+  h1 {
+    font-size: 60px; line-height: 1.06; font-weight: 700; letter-spacing: -0.035em;
+    max-width: 900px; margin: 0 auto 22px; text-wrap: balance;
+  }
+  h1 .grad {
+    background: linear-gradient(92deg, #0f766e 8%, #0d9488 52%, #0e7490 96%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .lede { font-size: 20px; line-height: 1.6; color: var(--muted); max-width: 800px; margin: 0 auto 40px; text-wrap: balance; }
+  .ctas { display: flex; justify-content: center; flex-wrap: wrap; gap: 12px; }
   .cta {
-    display: inline-block; background: var(--accent); color: #fff; text-decoration: none;
-    font-weight: 600; padding: 13px 26px; border-radius: 10px; margin: 6px;
+    display: inline-flex; align-items: center; gap: 8px; background: var(--accent); color: #fff;
+    text-decoration: none; font-weight: 600; font-size: 16px; padding: 13px 24px; border-radius: 10px;
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.18) inset, 0 10px 24px -12px rgba(15, 118, 110, 0.75);
   }
-  .cta.ghost { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
-  section { padding: 28px 0; }
-  h2 { font-size: 27px; margin: 0 0 22px; letter-spacing: -0.01em; }
-  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 18px; }
-  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 22px 24px; }
-  .card h3 { margin: 0 0 8px; font-size: 18px; }
-  .card p { margin: 0; color: var(--muted); font-size: 15px; }
-  .flow { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
-  .step { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; text-align: center; }
-  .step .n { color: var(--accent); font-weight: 700; font-size: 13px; }
-  .step .t { font-weight: 600; margin-top: 4px; }
-  .step .d { color: var(--muted); font-size: 13px; margin-top: 4px; }
-  footer { text-align: center; color: var(--muted); font-size: 14px; padding: 48px 24px; border-top: 1px solid var(--line); margin-top: 40px; }
-  code { background: var(--card); border: 1px solid var(--line); border-radius: 6px; padding: 2px 7px; font: 14px ui-monospace, Consolas, monospace; }
+  .cta.ghost { background: var(--card); color: var(--ink); border: 1px solid var(--line); box-shadow: none; }
+  .cta:hover { filter: brightness(1.06); }
+
+  section { padding: 30px 0; }
+  #features { padding-top: 52px; }
+  h2 { font-size: 28px; line-height: 1.25; margin: 0 0 26px; letter-spacing: -0.02em; }
+  .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 22px; }
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 22px 24px 24px;
+    box-shadow: 0 1px 2px rgba(23, 33, 46, 0.04), 0 14px 30px -26px rgba(23, 33, 46, 0.35);
+  }
+  .card h3 { display: flex; align-items: center; gap: 12px; margin: 0 0 10px; font-size: 17.5px; line-height: 1.3; letter-spacing: -0.01em; }
+  .ico {
+    flex: none; width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center;
+    background: var(--accent-soft); color: var(--accent);
+  }
+  .ico svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .card p { margin: 0; color: var(--muted); font-size: 15px; line-height: 1.6; text-wrap: pretty; }
+
+  .flow { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 16px; }
+  .step {
+    position: relative; background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    padding: 18px 16px 20px; text-align: center;
+  }
+  .step:not(:last-child)::after {
+    content: ""; position: absolute; top: 31px; right: -17px; width: 18px; height: 2px;
+    background: rgba(15, 118, 110, 0.35);
+  }
+  .step .n {
+    display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 50%;
+    background: var(--accent); color: #fff; font-weight: 700; font-size: 13px;
+  }
+  .step .t { font-weight: 600; margin-top: 10px; }
+  .step .d { color: var(--muted); font-size: 14px; line-height: 1.5; margin-top: 4px; }
+
+  .sweeper { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 32px; align-items: center; }
+  .sweeper h2 { margin-bottom: 10px; }
+  .sweeper p { margin: 0; color: var(--muted); font-size: 18px; }
+  .term {
+    margin: 0; background: #0f1d24; color: #d7efe9; border: 1px solid #1d3038; border-radius: 14px;
+    padding: 20px 22px; font: 15px/1.6 var(--mono); font-variant-ligatures: none; overflow-x: auto;
+    box-shadow: 0 18px 40px -28px rgba(15, 29, 36, 0.8);
+  }
+  .term .prompt { color: #5eead4; user-select: none; }
+  .term .nw { white-space: nowrap; }
+
+  footer { margin-top: 44px; border-top: 1px solid var(--line); }
+  footer .wrap { padding-top: 36px; padding-bottom: 48px; text-align: center; color: var(--muted); font-size: 14px; }
+  footer a { font-weight: 600; text-decoration: none; }
+  footer a:hover { text-decoration: underline; }
+
+  @media (max-width: 960px) {
+    .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .flow { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .step::after { display: none; }
+    .sweeper { grid-template-columns: 1fr; gap: 18px; }
+  }
+  @media (max-width: 640px) {
+    .wrap { padding: 0 20px; }
+    .nav a:not(.gh) { display: none; }
+    .hero { padding: 36px 0 44px; }
+    h1 { font-size: 34px; }
+    .lede { font-size: 18px; }
+    .grid, .flow { grid-template-columns: 1fr; }
+    .term { white-space: pre-wrap; }
+  }
 </style>
 </head>
 <body>
-<main>
-  <div class="hero">
+<div class="masthead">
+  <header class="top">
+    <div class="wrap">
+      <a class="brand" href="#" aria-label="MEMBRANE.AI home">
+        <svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#0f766e"/><path d="M16 6.5l8.5 3.6v5.6c0 5.3-3.6 9.3-8.5 10.8-4.9-1.5-8.5-5.5-8.5-10.8v-5.6z" fill="none" stroke="#ccfbf1" stroke-width="2" stroke-linejoin="round"/><path d="M12.4 16.3l2.5 2.5 4.9-5.1" fill="none" stroke="#ccfbf1" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>MEMBRANE<span class="ai">.AI</span></span>
+      </a>
+      <nav class="nav" aria-label="Primary">
+        <a href="#features">Features</a>
+        <a href="#how">How it works</a>
+        <a href="#sweeper">Code Sweeper</a>
+        <a class="gh" href="https://github.com/Ozgurisikdamar/Membrane-AI">GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <div class="hero wrap">
     <span class="badge">AI code governance</span>
     <h1>An immune system for <span class="grad">AI-generated code</span></h1>
     <p class="lede">MEMBRANE.AI puts real-time security and architectural guardrails at the point of
       generation — so the code your agents write is reviewed, masked of secrets, and gated before it
       ever merges.</p>
-    <a class="cta" href="https://github.com/Ozgurisikdamar/Membrane-AI">Get started</a>
-    <a class="cta ghost" href="#how">See how it works</a>
+    <div class="ctas">
+      <a class="cta" href="https://github.com/Ozgurisikdamar/Membrane-AI">Get started <span aria-hidden="true">→</span></a>
+      <a class="cta ghost" href="#how">See how it works</a>
+    </div>
   </div>
+</div>
 
-  <section>
+<main class="wrap">
+  <section id="features">
     <h2>What it does</h2>
     <div class="grid">
-      <div class="card"><h3>Secret &amp; risk scanning</h3><p>Deterministic detectors catch leaked
+      <div class="card"><h3><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="15.5" r="4"/><path d="M10.9 12.6 20 3.5M16.2 7.3l2.3 2.3M18.3 5.2l2.2 2.2"/></svg></span>Secret &amp; risk scanning</h3><p>Deterministic detectors catch leaked
         credentials and risky patterns and mask them before any LLM tier sees the diff.</p></div>
-      <div class="card"><h3>Three-tier cost gate</h3><p>Cache → local model → premium dual-model
+      <div class="card"><h3><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5 3.5 7.8 12 12l8.5-4.2L12 3.5Z"/><path d="m3.5 12.2 8.5 4.3 8.5-4.3"/><path d="m3.5 16.5 8.5 4.2 8.5-4.2"/></svg></span>Three-tier cost gate</h3><p>Cache → local model → premium dual-model
         consensus (Claude Sonnet 4.6 + Gemini). You pay for deep review only on real risk.</p></div>
-      <div class="card"><h3>Merge gating</h3><p>Commit statuses and PR comments block risky changes —
+      <div class="card"><h3><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6.5" cy="5.5" r="2.3"/><circle cx="6.5" cy="18.5" r="2.3"/><circle cx="17.5" cy="12" r="2.3"/><path d="M6.5 7.8v8.4M6.5 7.8c0 3.3 3.8 4.2 8.7 4.2"/></svg></span>Merge gating</h3><p>Commit statuses and PR comments block risky changes —
         run shadow-mode first, then flip to enforcement when you trust it.</p></div>
-      <div class="card"><h3>MCP &amp; package firewall</h3><p>Governs agent tool calls, blocks typosquatted
+      <div class="card"><h3><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="14" rx="2"/><path d="M3.5 9.7h17M3.5 14.3h17M9.2 5v4.7M14.8 5v4.7M12 9.7v4.6M6.8 14.3V19M17.2 14.3V19"/></svg></span>MCP &amp; package firewall</h3><p>Governs agent tool calls, blocks typosquatted
         dependencies, and discovers shadow-AI usage across your org.</p></div>
-      <div class="card"><h3>Runs everywhere</h3><p>Static CLI, IDE extension, and multi-arch containers —
+      <div class="card"><h3><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 8 4.5v9L12 21l-8-4.5v-9L12 3Z"/><path d="m4 7.5 8 4.5 8-4.5M12 12v9"/></svg></span>Runs everywhere</h3><p>Static CLI, IDE extension, and multi-arch containers —
         SaaS, private VPC, or fully air-gapped.</p></div>
-      <div class="card"><h3>Observable &amp; provable</h3><p>Distributed tracing, metrics, an audit trail,
+      <div class="card"><h3><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12.5h4.2l2.6-6.5 4.4 12 2.6-5.5H21"/></svg></span>Observable &amp; provable</h3><p>Distributed tracing, metrics, an audit trail,
         and a measured accuracy SLO (precision / recall / false-positive rate).</p></div>
     </div>
   </section>
@@ -85,17 +207,20 @@
     </div>
   </section>
 
-  <section>
-    <h2>Try the Code Sweeper</h2>
-    <p class="lede" style="margin-left:0;text-align:left">A single offline binary — scan any repo and get a
-      Generative-AI Technical-Debt Report:</p>
-    <p><code>membrane scan . --report html --out debt.html</code></p>
+  <section id="sweeper" class="sweeper">
+    <div>
+      <h2>Try the Code Sweeper</h2>
+      <p>A single offline binary — scan any repo and get a Generative-AI Technical-Debt Report:</p>
+    </div>
+    <pre class="term"><code><span class="prompt">$ </span>membrane scan . <span class="nw">--report html</span> <span class="nw">--out debt.html</span></code></pre>
   </section>
+</main>
 
-  <footer>
+<footer>
+  <div class="wrap">
     MEMBRANE.AI — real-time security &amp; architectural guardrails for AI coding agents.<br>
     <a href="https://github.com/Ozgurisikdamar/Membrane-AI">github.com/Ozgurisikdamar/Membrane-AI</a>
-  </footer>
-</main>
+  </div>
+</footer>
 </body>
 </html>
