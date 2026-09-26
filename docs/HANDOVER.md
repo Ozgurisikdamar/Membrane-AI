@@ -3,7 +3,16 @@
 > **On "devam et": read this file, then do "Next up". Update this file before the session ends.**
 > Keep it short and current — this is state, not history.
 
-_Last updated: 2026-09-26 — session: debt-report polish — the HTML report got a redesigned layout
+_Last updated: 2026-09-26 — session: review follow-up — landing copy now matches the build (lede,
+the "Secret & risk scanning" and "Three-tier cost gate" cards and the "Mask" step: detected secrets
+are masked for later stages, the local model is a keyword heuristic by default, the Claude + Gemini
+tier is opt-in); stale "six services" / "5 Go services" counts corrected to seven / six. For the
+record, the earlier "text overflow" commit `c3dc0f6` also reworded two strings in
+`fig01_topology.svg`: the subtitle (was "Event-driven microservices · proactive gateway +
+post-generation hooks · target <150 ms at edge") and the cloud card (was "Claude Sonnet 4.6 /
+Gemini", now "Claude Sonnet 4.6 + Gemini · dual-model consensus"). Roadmap state unchanged._
+
+_Previous: 2026-09-26 — session: debt-report polish — the HTML report got a redesigned layout
 (grade tile, severity cards, rule bars) and every finding now quotes its **masked** source line
 (`excerpt`); landing page restyled (header, balanced hero, icons — copy unchanged);
 `membrane-gap.svg` and `fig01_topology.svg` fixed for text overflow (the topology subtitle now says
