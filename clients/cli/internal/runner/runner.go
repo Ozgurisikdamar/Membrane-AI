@@ -11,12 +11,17 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/Ozgurisikdamar/Membrane-AI/pkg/scan"
 )
 
 // DefaultMaxFileSize bounds a scanned file (larger files are skipped).
 const DefaultMaxFileSize = 1 << 20 // 1 MiB
+
+// MaxExcerptRunes bounds a finding's source excerpt: minified or generated
+// files can put a whole bundle on one line.
+const MaxExcerptRunes = 160
 
 // skipDirs are never descended into: dependency trees and build output would
 // drown real findings in third-party noise.
@@ -48,6 +53,12 @@ type FileFinding struct {
 	Rule     string        `json:"rule"`
 	Severity scan.Severity `json:"severity"`
 	Message  string        `json:"message"`
+
+	// Excerpt is the flagged source line AFTER secret masking: every value
+	// the detectors recognize on it reads [MASKED:<rule>], never the raw
+	// credential. Trimmed, control characters neutralized, capped at
+	// MaxExcerptRunes; empty when the line is unknown.
+	Excerpt string `json:"excerpt,omitempty"`
 }
 
 // Result is the aggregate outcome of a scan run.
@@ -111,9 +122,14 @@ func Run(ctx context.Context, opts Options) (Result, error) {
 		if dErr != nil {
 			return dErr // context cancellation only
 		}
+		var lines []string // split only when the file has findings
 		for _, f := range findings {
+			if lines == nil {
+				lines = strings.Split(string(content), "\n")
+			}
 			res.Findings = append(res.Findings, FileFinding{
 				File: rel, Line: f.Line, Rule: f.Rule, Severity: f.Severity, Message: f.Message,
+				Excerpt: maskedExcerpt(lines, f.Line, detectors),
 			})
 		}
 		return nil
@@ -162,6 +178,33 @@ func Run(ctx context.Context, opts Options) (Result, error) {
 		}
 	}
 	return res, nil
+}
+
+// maskedExcerpt returns line n (1-based) run through every Masker in the
+// detector chain. The single line is masked on its own rather than read from
+// the whole-file masked output: line numbers stay exact, and because the
+// detectors are line-based, every secret they flagged on this line is
+// redacted before the text can reach a report.
+func maskedExcerpt(lines []string, n int, detectors []scan.Detector) string {
+	if n < 1 || n > len(lines) {
+		return ""
+	}
+	line := lines[n-1]
+	for _, d := range detectors {
+		if m, ok := d.(scan.Masker); ok {
+			line = m.Mask(line)
+		}
+	}
+	line = strings.TrimSpace(strings.Map(func(r rune) rune {
+		if r < 0x20 || r == 0x7f {
+			return ' ' // tabs, CR and terminal escapes
+		}
+		return r
+	}, line))
+	if utf8.RuneCountInString(line) > MaxExcerptRunes {
+		line = string([]rune(line)[:MaxExcerptRunes]) + "…"
+	}
+	return line
 }
 
 // isBinary treats content with a NUL byte in its head as non-text.

@@ -1,7 +1,10 @@
 package report_test
 
 import (
+	"context"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -292,5 +295,100 @@ func TestRenderHTML_EscapesAndStructure(t *testing.T) {
 	}
 	if strings.Contains(out, "<script>alert") {
 		t.Error("repo-derived text not HTML-escaped")
+	}
+}
+
+// maskedScan runs the real runner (and therefore pkg/scan's real maskers) over
+// a file holding a documented example credential, so the rendered reports are
+// checked against genuine masker output rather than a hand-written string.
+func maskedScan(t *testing.T) runner.Result {
+	t.Helper()
+	root := t.TempDir()
+	src := "package cfg\n\nvar awsKey = \"AKIAIOSFODNN7EXAMPLE\" // <b>fallback</b> | dev\n"
+	if err := os.WriteFile(filepath.Join(root, "cfg.go"), []byte(src), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	res, err := runner.Run(context.Background(), runner.Options{Root: root})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(res.Findings) != 1 || res.Findings[0].Excerpt == "" {
+		t.Fatalf("findings = %+v", res.Findings)
+	}
+	return res
+}
+
+func TestRenderHTML_ExcerptIsMaskedHighlightedAndEscaped(t *testing.T) {
+	var b strings.Builder
+	if err := report.RenderHTML(&b, report.Build(maskedScan(t), at)); err != nil {
+		t.Fatal(err)
+	}
+	out := b.String()
+	if strings.Contains(out, "AKIAIOSFODNN7EXAMPLE") {
+		t.Fatal("raw credential reached the HTML report")
+	}
+	for _, want := range []string{
+		`<mark>[MASKED:aws-access-key-id]</mark>`, // placeholder regex matches the real masker
+		`&lt;b&gt;fallback&lt;/b&gt;`,             // repo text around it stays escaped
+		`<span class="ln">3</span>`,
+		`class="grade grade-`,
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("missing %q", want)
+		}
+	}
+}
+
+func TestRenderMarkdown_ExcerptColumnIsMaskedAndEscaped(t *testing.T) {
+	var b strings.Builder
+	if err := report.RenderMarkdown(&b, report.Build(maskedScan(t), at)); err != nil {
+		t.Fatal(err)
+	}
+	out := b.String()
+	if strings.Contains(out, "AKIAIOSFODNN7EXAMPLE") {
+		t.Fatal("raw credential reached the Markdown report")
+	}
+	// The pipe inside the quoted line must not split the table row.
+	if !strings.Contains(out, "`var awsKey = \"[MASKED:aws-access-key-id]\" // <b>fallback</b> \\| dev` |") {
+		t.Fatalf("masked source column missing or unescaped:\n%s", out)
+	}
+}
+
+func TestRenderHTML_RuleBarsScaleToTheLargestRule(t *testing.T) {
+	var b strings.Builder
+	if err := report.RenderHTML(&b, report.Build(sampleResult(), at)); err != nil {
+		t.Fatal(err)
+	}
+	// Every sample rule has count 1, so every bar is full width.
+	if got := strings.Count(b.String(), `style="width: 100%"`); got != 4 {
+		t.Fatalf("full-width bars = %d, want 4", got)
+	}
+
+	res := runner.Result{FilesScanned: 10}
+	for i, rule := range []string{"zeta", "zeta", "zeta", "alpha"} {
+		res.Findings = append(res.Findings, runner.FileFinding{
+			File: "f.go", Line: i + 1, Rule: rule, Severity: scan.SeverityWarning,
+		})
+	}
+	b.Reset()
+	if err := report.RenderHTML(&b, report.Build(res, at)); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(b.String(), `style="width: 33.3%"`) {
+		t.Fatal("a 1-of-3 rule must render a one-third bar")
+	}
+}
+
+func TestRenderHTML_NothingScannedHasNeutralGrade(t *testing.T) {
+	var b strings.Builder
+	if err := report.RenderHTML(&b, report.Build(runner.Result{Root: "/repo", FilesSkipped: 4}, at)); err != nil {
+		t.Fatal(err)
+	}
+	out := b.String()
+	if !strings.Contains(out, `class="grade grade-none"`) || !strings.Contains(out, "Nothing was scanned") {
+		t.Fatalf("zero-scan HTML report wrong:\n%s", out)
+	}
+	if strings.Contains(out, "Clean ✓") {
+		t.Error("zero-scan run must not claim a clean bill of health")
 	}
 }

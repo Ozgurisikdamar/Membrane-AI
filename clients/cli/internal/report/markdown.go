@@ -62,10 +62,15 @@ func RenderMarkdown(w io.Writer, rep Report) error {
 	b.WriteString("\n")
 
 	b.WriteString("## Detail\n\n")
-	b.WriteString("| File | Line | Severity | Rule | Message |\n| --- | ---: | --- | --- | --- |\n")
+	b.WriteString("Source lines are quoted after masking: a secret the detectors recognize appears only as its `[MASKED:rule]` placeholder.\n\n")
+	b.WriteString("| File | Line | Severity | Rule | Message | Source (masked) |\n| --- | ---: | --- | --- | --- | --- |\n")
 	for _, f := range rep.Findings {
-		fmt.Fprintf(&b, "| `%s` | %d | %s | `%s` | %s |\n",
-			mdEscape(f.File), f.Line, f.Severity, mdEscape(f.Rule), mdEscape(f.Message))
+		source := ""
+		if f.Excerpt != "" {
+			source = "`" + mdEscape(f.Excerpt) + "`"
+		}
+		fmt.Fprintf(&b, "| `%s` | %d | %s | `%s` | %s | %s |\n",
+			mdEscape(f.File), f.Line, f.Severity, mdEscape(f.Rule), mdEscape(f.Message), source)
 	}
 	if rep.Truncated > 0 {
 		fmt.Fprintf(&b, "\n_%d more finding(s) omitted from this table; the aggregates above cover all of them._\n", rep.Truncated)

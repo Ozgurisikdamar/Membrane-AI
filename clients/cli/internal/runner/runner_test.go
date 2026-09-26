@@ -4,7 +4,9 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
+	"unicode/utf8"
 
 	"github.com/Ozgurisikdamar/Membrane-AI/clients/cli/internal/runner"
 )
@@ -104,5 +106,62 @@ func TestRun_LanguageScopedRuleNeedsGoFile(t *testing.T) {
 	}
 	if len(res.Findings) != 0 {
 		t.Fatalf("go-only rule fired on a python file: %+v", res.Findings)
+	}
+}
+
+func TestRun_ExcerptIsTheMaskedSourceLine(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, root, "auth/creds.go", "package auth\n\nkey := \"AKIAIOSFODNN7EXAMPLE\"\n")
+	// A risky-pattern line that also carries a credential: both findings must
+	// quote the line with the credential already redacted.
+	writeFile(t, root, "db/keys.go",
+		"rows, err := db.Query(\"SELECT * FROM keys WHERE id = 'AKIAIOSFODNN7EXAMPLE' AND owner = \" + owner)\n")
+	writeFile(t, root, "cfg.env", "\tDB_PASSWORD = \"SuperSecret123!\"\r\n")
+
+	res, err := runner.Run(context.Background(), runner.Options{Root: root})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := map[string]string{
+		"auth/creds.go:aws-access-key-id": `key := "[MASKED:aws-access-key-id]"`,
+		"db/keys.go:aws-access-key-id":    `rows, err := db.Query("SELECT * FROM keys WHERE id = '[MASKED:aws-access-key-id]' AND owner = " + owner)`,
+		"db/keys.go:sql-string-concat":    `rows, err := db.Query("SELECT * FROM keys WHERE id = '[MASKED:aws-access-key-id]' AND owner = " + owner)`,
+		// Tab and CR neutralized and trimmed; the whole assignment is one match.
+		"cfg.env:generic-assigned-secret": `DB_[MASKED:generic-assigned-secret]`,
+	}
+	if len(res.Findings) != len(want) {
+		t.Fatalf("findings = %+v", res.Findings)
+	}
+	for _, f := range res.Findings {
+		key := f.File + ":" + f.Rule
+		if got, ok := want[key]; !ok || f.Excerpt != got {
+			t.Errorf("%s excerpt = %q, want %q", key, f.Excerpt, got)
+		}
+		for _, raw := range []string{"AKIAIOSFODNN7EXAMPLE", "SuperSecret123!"} {
+			if strings.Contains(f.Excerpt, raw) {
+				t.Errorf("%s excerpt leaks %q", key, raw)
+			}
+		}
+	}
+}
+
+func TestRun_ExcerptIsCappedOnRuneBoundary(t *testing.T) {
+	root := t.TempDir()
+	long := `db.Query("SELECT 1" + x) // ` + strings.Repeat("ğ", 300)
+	writeFile(t, root, "min.js", long+"\n")
+
+	res, err := runner.Run(context.Background(), runner.Options{Root: root})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(res.Findings) != 1 {
+		t.Fatalf("findings = %+v", res.Findings)
+	}
+	ex := res.Findings[0].Excerpt
+	if n := utf8.RuneCountInString(ex); n != runner.MaxExcerptRunes+1 || !strings.HasSuffix(ex, "…") {
+		t.Fatalf("excerpt runes = %d (want %d incl. ellipsis): %q", n, runner.MaxExcerptRunes+1, ex)
+	}
+	if !utf8.ValidString(ex) {
+		t.Fatal("excerpt cut inside a multi-byte rune")
 	}
 }

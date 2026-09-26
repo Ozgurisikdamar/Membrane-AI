@@ -87,7 +87,8 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done.
       - [x] **"Generative-AI Technical-Debt Report" output mode** (the GTM lead magnet):
             `--report md|html [--out file]` — per-rule/per-directory/top-file aggregates plus a
             transparent severity-weighted debt score and A–F grade; HTML is a single self-contained
-            light-toned page (`internal/report`)
+            light-toned page (`internal/report`); detail rows quote the flagged source line after
+            secret masking (`[MASKED:<rule>]`, never the value — also the JSON `excerpt` field)
       - [x] **packaging matrix** (`clients/cli/.goreleaser.yaml`, D-033): tarball/zip + deb/rpm
             (nfpm) + Homebrew tap + winget; `task release[:check|:snapshot]`; CI `release` job on
             `v*` tags; `membrane version` ldflag-stamped. See docs/RELEASING.md

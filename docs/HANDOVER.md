@@ -3,7 +3,11 @@
 > **On "devam et": read this file, then do "Next up". Update this file before the session ends.**
 > Keep it short and current — this is state, not history.
 
-_Last updated: 2026-09-15 — session: recorded **D-036** (GitHub Actions never runs on this
+_Last updated: 2026-09-26 — session: debt-report polish — the HTML report got a redesigned layout
+(grade tile, severity cards, rule bars) and every finding now quotes its **masked** source line
+(`excerpt`). Roadmap state unchanged._
+
+_Previous: 2026-09-15 — session: recorded **D-036** (GitHub Actions never runs on this
 account; `task lint`/`task test` is the only gate). No code touched; roadmap state unchanged.
 Last substantive session: 2026-06-12 — P3 completion sweep (eval harness, packaging, Terraform,
 multi-arch, Redis delivery log, MCP gateway, shadow→enforce, VS Code ext, SCM, compliance, landing,
@@ -116,6 +120,13 @@ collector) and a **Grafana dashboard**.
   memory first (no truncated file on render error, close checked before the success line);
   report totals tallied from findings (single source of truth); unknown severities weigh as
   warnings, never info.
+- **Masked source lines in the report (2026-09-26)**: each finding carries `Excerpt` — the flagged
+  line run through the detector chain's `Masker`s *on its own* (not read from the whole-file masked
+  output, so line numbers stay exact and every secret the line-based detectors flagged is redacted),
+  control chars neutralized, capped at 160 runes. Rendered in HTML (highlighted `[MASKED:<rule>]`
+  chips), Markdown (a "Source (masked)" column) and `--json` (`excerpt`, omitempty). Pinned by
+  `runner_test.go` (raw values never in the excerpt) and `report_test.go` (real masker output →
+  no raw value in either format; placeholder highlighting matches pkg/scan's marker).
 
 - **Containerization done (D-029)**: one parameterized `deploy/docker/Dockerfile.go` (multi-stage,
   BuildKit cache mounts, static binary → `distroless/static:nonroot`) builds all 5 Go services;
