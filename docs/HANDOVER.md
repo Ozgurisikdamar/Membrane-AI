@@ -5,7 +5,9 @@
 
 _Last updated: 2026-09-26 — session: debt-report polish — the HTML report got a redesigned layout
 (grade tile, severity cards, rule bars) and every finding now quotes its **masked** source line
-(`excerpt`). Roadmap state unchanged._
+(`excerpt`); landing page restyled (header, balanced hero, icons — copy unchanged);
+`membrane-gap.svg` and `fig01_topology.svg` fixed for text overflow (the topology subtitle now says
+it is the **target** architecture). Roadmap state unchanged._
 
 _Previous: 2026-09-15 — session: recorded **D-036** (GitHub Actions never runs on this
 account; `task lint`/`task test` is the only gate). No code touched; roadmap state unchanged.
