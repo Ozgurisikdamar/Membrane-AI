@@ -10,7 +10,7 @@
 # map with `--set-string` (NOT `--set`) so numeric/boolean values stay strings.
 
 image:
-  # Registry/namespace prefix for the six images, WITHOUT trailing slash.
+  # Registry/namespace prefix for the seven images, WITHOUT trailing slash.
   # Empty = bare local names (membrane/<svc>), as produced by `task build:images`.
   registry: ""
   tag: dev

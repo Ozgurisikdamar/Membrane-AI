@@ -103,7 +103,7 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done.
       blocks the merge; rendered in the report title, table-tested
 - [x] **Observability & SRE** (OpenTelemetry) — traces + metrics across the fleet (D-032)
       - [x] **`pkg/observability`**: OTLP/gRPC trace+metric exporters gated on endpoint, W3C
-            propagation, Kafka header carrier, slog bridge; wired into all 5 Go services
+            propagation, Kafka header carrier, slog bridge; wired into all 6 Go services
       - [x] **otelgrpc/otelhttp auto-instrumentation**: every gRPC/HTTP hop joins the trace
       - [x] **increment 3**: OTel metrics (`membrane_verdicts_total`), Python (semantic) tracing,
             outbox-side verdict propagation (full ingestion→orchestrator→reporter trace), opt-in

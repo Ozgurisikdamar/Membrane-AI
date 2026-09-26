@@ -104,4 +104,4 @@ nothing from `app`/`adapters`; `app` depends only on `ports` (interfaces), never
   (multi-stage, BuildKit cache mounts, static binary on `distroless/static:nonroot`) +
   `Dockerfile.semantic` (two-stage `python:3.12-slim`, wheels, non-root). `task build:images` tags
   `membrane/<svc>:dev`; `task full-up` runs the all-container profile
-  (`deploy/compose/docker-compose.full.yml`: dual-listener Redpanda, one-shot migrate, all 6 services).
+  (`deploy/compose/docker-compose.full.yml`: dual-listener Redpanda, one-shot migrate, all 7 services).

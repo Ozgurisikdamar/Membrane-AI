@@ -2,7 +2,7 @@ apiVersion: v2
 name: membrane
 description: >-
   MEMBRANE.AI — real-time security and architectural guardrails for AI coding
-  agents. Deploys the six platform services; Kafka, Redis and Postgres are
+  agents. Deploys the seven platform services; Kafka, Redis and Postgres are
   consumed as external endpoints (D-030), matching the SaaS / private-VPC /
   air-gapped deployment postures (D-011).
 type: application

@@ -1,4 +1,4 @@
-# All-container dev profile for MEMBRANE.AI (D-029): infra + ALL six services
+# All-container dev profile for MEMBRANE.AI (D-029): infra + ALL seven services
 # from the locally built images. Self-contained — do not combine with the
 # host-run profile (docker-compose.dev.yml keeps Kafka advertised on localhost
 # for services running on the host; this file advertises on the compose network).
@@ -8,7 +8,8 @@
 #
 # Service containers are distroless (no shell), so compose healthchecks can't
 # exec inside them — probe readiness from the host instead, e.g.
-#   curl http://localhost:8101/readyz   (ingestion; 8102..8105 for the rest)
+#   curl http://localhost:8101/readyz   (ingestion; 8102..8106 for the other Go services,
+#   8005 for semantic)
 # Host Kafka access (rpk, kcat) goes through the external listener :19092.
 name: membrane-full
 

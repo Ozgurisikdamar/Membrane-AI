@@ -65,7 +65,7 @@ collector) and a **Grafana dashboard**.
 - **Observability foundation done (D-032)**: `pkg/observability` — `Setup` installs the W3C
   propagator always + an OTLP/gRPC trace exporter only when `OTLP_ENDPOINT` is set (empty = no-op,
   prod-safe). Helpers `Stop`/`Start`/`InjectHeaders`/`ExtractContext`/`TraceID` keep otel out of
-  domain/app (adapters + composition only). All 5 Go services wire `Setup`/`Stop` + config
+  domain/app (adapters + composition only). All 6 Go services wire `Setup`/`Stop` + config
   `MEMBRANE_<SVC>_OTLP_ENDPOINT`/`_OTLP_INSECURE`. **Distributed trace across Kafka**: ingestion
   opens the span + stamps W3C headers on the submission record; orchestrator extracts + spans the
   Saga (one trace ingestion→orchestrator). Helm `infra.otlpEndpoint` + compose `MEMBRANE_OTLP_ENDPOINT`.
@@ -98,7 +98,7 @@ collector) and a **Grafana dashboard**.
   never the request URL or key).
 
 - **Helm chart done (D-030)**: `deploy/helm/membrane` — one generic Deployment/Service template
-  loops over `.Values.services` (6 services); infra (Kafka/Redis/Postgres/vLLM) as external
+  loops over `.Values.services` (7 services); infra (Kafka/Redis/Postgres/vLLM) as external
   endpoints; one optional Secret; opt-in topics hook Job; pods non-root + read-only rootfs +
   `automountServiceAccountToken: false`. `task helm:lint`; CI `helm` job added.
 - **Hardened by the chart's multi-agent review** (all confirmed findings fixed): port overrides
@@ -131,11 +131,11 @@ collector) and a **Grafana dashboard**.
   no raw value in either format; placeholder highlighting matches pkg/scan's marker).
 
 - **Containerization done (D-029)**: one parameterized `deploy/docker/Dockerfile.go` (multi-stage,
-  BuildKit cache mounts, static binary → `distroless/static:nonroot`) builds all 5 Go services;
+  BuildKit cache mounts, static binary → `distroless/static:nonroot`) builds all 6 Go services;
   `Dockerfile.semantic` = two-stage python-slim wheels, non-root. `task build:images` →
   `membrane/<svc>:dev`. **`task full-up`** runs `deploy/compose/docker-compose.full.yml`
   (self-contained: dual-listener Redpanda — internal `redpanda:9092` / host `localhost:19092`,
-  one-shot `topics` + `migrate` containers, all 6 services wired by env). Distroless = no shell ⇒
+  one-shot `topics` + `migrate` containers, all 7 services wired by env). Distroless = no shell ⇒
   probe `/readyz` from the host. `.dockerignore` keeps the context lean. CI got an `images` job.
   **E2E proven all-container**: webhook 202 → verdict `rejected` (2 secrets + SQL concat +
   `local-heuristic:masked` privacy proof) consumed off `code.verdict.v1`.

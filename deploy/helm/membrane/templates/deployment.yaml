@@ -1,5 +1,5 @@
 {{- /*
-One Deployment per enabled service — the six services share one shape
+One Deployment per enabled service — the seven services share one shape
 (distroless/non-root image, env-only config, /livez + /readyz on a health
 port), so a single template renders them all (D-030).
 */ -}}
