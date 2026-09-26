@@ -12,6 +12,15 @@
       <stop offset="0" stop-color="#fb7185"/>
       <stop offset="1" stop-color="#f43f5e"/>
     </linearGradient>
+    <radialGradient id="glowTeal">
+      <stop offset="0" stop-color="#14b8a6" stop-opacity=".16"/>
+      <stop offset="1" stop-color="#14b8a6" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowRose">
+      <stop offset="0" stop-color="#e11d48" stop-opacity=".11"/>
+      <stop offset="1" stop-color="#e11d48" stop-opacity="0"/>
+    </radialGradient>
+    <clipPath id="canvas"><rect width="1600" height="900" rx="28"/></clipPath>
     <filter id="glowCyan" x="-30%" y="-30%" width="160%" height="160%">
       <feGaussianBlur stdDeviation="8" result="b"/>
       <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
@@ -32,8 +41,10 @@
   </defs>
 
   <rect width="1600" height="900" rx="28" fill="url(#bg)"/>
-  <circle cx="1330" cy="120" r="210" fill="#0f766e" opacity=".08"/>
-  <circle cx="240" cy="170" r="170" fill="#be123c" opacity=".06"/>
+  <g clip-path="url(#canvas)">
+    <circle cx="1330" cy="110" r="300" fill="url(#glowTeal)"/>
+    <circle cx="250" cy="150" r="250" fill="url(#glowRose)"/>
+  </g>
 
   <text x="800" y="72" text-anchor="middle" class="title">The gap <tspan fill="#22d3ee">MEMBRANE.AI</tspan> closes</text>
 
@@ -53,21 +64,25 @@
     <rect x="920" y="235" width="250" height="118" rx="18" fill="#101a29" stroke="#29384a"/>
     <rect x="1202" y="235" width="284" height="118" rx="18" fill="#101a29" stroke="#29384a"/>
 
-    <text x="100" y="270" class="cardTitle">AI Agent</text>
-    <text x="100" y="299" class="cardText">Generates code from prompt</text>
+    <text x="100" y="274" class="cardTitle">AI Agent</text>
+    <text x="100" y="303" class="cardText">Generates code</text>
+    <text x="100" y="325" class="cardText">from prompt</text>
 
-    <text x="382" y="270" class="cardTitle">Generated Code</text>
-    <text x="382" y="299" class="cardText">May drift from trusted patterns</text>
+    <text x="382" y="274" class="cardTitle">Generated Code</text>
+    <text x="382" y="303" class="cardText">May drift from</text>
+    <text x="382" y="325" class="cardText">trusted patterns</text>
 
-    <text x="664" y="270" class="cardTitle">Commit / PR</text>
-    <text x="664" y="299" class="cardText">Human review catches some issues</text>
+    <text x="664" y="274" class="cardTitle">Commit / PR</text>
+    <text x="664" y="303" class="cardText">Human review catches</text>
+    <text x="664" y="325" class="cardText">some issues</text>
 
-    <text x="946" y="270" class="cardTitle">SAST</text>
-    <text x="946" y="299" class="cardText">Finds known vulnerability patterns</text>
+    <text x="946" y="274" class="cardTitle">SAST</text>
+    <text x="946" y="303" class="cardText">Finds known</text>
+    <text x="946" y="325" class="cardText">vulnerability patterns</text>
 
-    <text x="1228" y="270" class="cardTitle">Merged / Deployed</text>
-    <text x="1228" y="299" class="cardText">Semantic or architecture issues</text>
-    <text x="1228" y="321" class="cardText">may already be embedded</text>
+    <text x="1228" y="274" class="cardTitle">Merged / Deployed</text>
+    <text x="1228" y="303" class="cardText">Semantic or architecture issues</text>
+    <text x="1228" y="325" class="cardText">may already be embedded</text>
 
     <path d="M326 294h26m-10-10l10 10-10 10" stroke="#fb7185" stroke-width="3" fill="none"/>
     <path d="M608 294h26m-10-10l10 10-10 10" stroke="#fb7185" stroke-width="3" fill="none"/>
@@ -95,20 +110,25 @@
     <rect x="914" y="595" width="248" height="126" rx="18" fill="#0d1b2c" stroke="#225069"/>
     <rect x="1194" y="595" width="292" height="126" rx="18" fill="#083328" stroke="#2dd4bf"/>
 
-    <text x="98" y="630" class="cardTitle">Prompt / MCP</text>
-    <text x="98" y="659" class="cardText">Controlled prompt and tool boundary</text>
+    <text x="98" y="638" class="cardTitle">Prompt / MCP</text>
+    <text x="98" y="667" class="cardText">Controlled prompt and</text>
+    <text x="98" y="689" class="cardText">tool boundary</text>
 
-    <text x="378" y="630" class="cardTitle">Context + Policy</text>
-    <text x="378" y="659" class="cardText">Trusted codebase rules injected</text>
+    <text x="378" y="638" class="cardTitle">Context + Policy</text>
+    <text x="378" y="667" class="cardText">Trusted codebase</text>
+    <text x="378" y="689" class="cardText">rules injected</text>
 
-    <text x="658" y="630" class="cardTitle">AI Agent</text>
-    <text x="658" y="659" class="cardText">Generates inside governed context</text>
+    <text x="658" y="638" class="cardTitle">AI Agent</text>
+    <text x="658" y="667" class="cardText">Generates inside</text>
+    <text x="658" y="689" class="cardText">governed context</text>
 
-    <text x="938" y="630" class="cardTitle">Diff Verification</text>
-    <text x="938" y="659" class="cardText">AST + semantic + policy checks</text>
+    <text x="938" y="638" class="cardTitle">Diff Verification</text>
+    <text x="938" y="667" class="cardText">AST + semantic</text>
+    <text x="938" y="689" class="cardText">+ policy checks</text>
 
-    <text x="1218" y="630" class="cardTitle">CI/CD Gate</text>
-    <text x="1218" y="659" class="cardText">Only compliant changes continue</text>
+    <text x="1218" y="638" class="cardTitle">CI/CD Gate</text>
+    <text x="1218" y="667" class="cardText">Only compliant</text>
+    <text x="1218" y="689" class="cardText">changes continue</text>
 
     <path d="M324 658h26m-10-10l10 10-10 10" stroke="#38bdf8" stroke-width="3" fill="none"/>
     <path d="M604 658h26m-10-10l10 10-10 10" stroke="#38bdf8" stroke-width="3" fill="none"/>
@@ -123,20 +143,20 @@
   <text x="162" y="782" class="stage" fill="#22d3ee">GOVERN</text>
   <text x="162" y="805" class="mini">Rules and trusted context before generation</text>
 
-  <path d="M470 786h150" stroke="#38bdf8" stroke-width="2" stroke-dasharray="5 7"/>
-  <circle cx="620" cy="786" r="5" fill="#38bdf8"/>
+  <path d="M452 786h154" stroke="#38bdf8" stroke-width="2" stroke-dasharray="5 7"/>
+  <circle cx="611" cy="786" r="5" fill="#38bdf8"/>
 
-  <circle cx="704" cy="786" r="21" fill="#0369a1" opacity=".95"/>
-  <circle cx="700" cy="782" r="8" fill="none" stroke="#e0f2fe" stroke-width="2"/>
-  <path d="M706 788l8 8" stroke="#e0f2fe" stroke-width="2"/>
-  <text x="740" y="782" class="stage" fill="#38bdf8">VERIFY</text>
-  <text x="740" y="805" class="mini">Code, dependencies, architecture and semantics</text>
+  <circle cx="652" cy="786" r="21" fill="#0369a1" opacity=".95"/>
+  <circle cx="648" cy="782" r="8" fill="none" stroke="#e0f2fe" stroke-width="2"/>
+  <path d="M654 788l8 8" stroke="#e0f2fe" stroke-width="2"/>
+  <text x="688" y="782" class="stage" fill="#38bdf8">VERIFY</text>
+  <text x="688" y="805" class="mini">Code, dependencies, architecture and semantics</text>
 
-  <path d="M1060 786h112" stroke="#2dd4bf" stroke-width="2" stroke-dasharray="5 7"/>
-  <circle cx="1172" cy="786" r="5" fill="#2dd4bf"/>
+  <path d="M1009 786h154" stroke="#2dd4bf" stroke-width="2" stroke-dasharray="5 7"/>
+  <circle cx="1168" cy="786" r="5" fill="#2dd4bf"/>
 
-  <circle cx="1248" cy="786" r="21" fill="#0f766e" opacity=".95"/>
-  <path d="M1248 771l13 6v10c0 9-6 16-13 20-7-4-13-11-13-20v-10z" fill="none" stroke="#ccfbf1" stroke-width="2"/>
-  <text x="1284" y="782" class="stage" fill="#5eead4">ENFORCE</text>
-  <text x="1284" y="805" class="mini">Block risky changes before merge</text>
+  <circle cx="1209" cy="786" r="21" fill="#0f766e" opacity=".95"/>
+  <path d="M1209 771l13 6v10c0 9-6 16-13 20-7-4-13-11-13-20v-10z" fill="none" stroke="#ccfbf1" stroke-width="2"/>
+  <text x="1245" y="782" class="stage" fill="#5eead4">ENFORCE</text>
+  <text x="1245" y="805" class="mini">Block risky changes before merge</text>
 </svg>
