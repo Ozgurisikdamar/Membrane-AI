@@ -248,3 +248,55 @@ tasks:
       MEMBRANE_REPORTER_LOG_LEVEL: "debug"
     cmds:
       - go run ./cmd/reporter
+
+  # --- Dashboard (web/dashboard — Next.js product UI, D1+) -------------------
+  dashboard:install:
+    desc: Install dashboard dependencies (pinned, from lockfile)
+    dir: web/dashboard
+    cmds:
+      - npm ci
+
+  dashboard:typecheck:
+    desc: Type-check the dashboard
+    dir: web/dashboard
+    cmds:
+      - npm run -s typecheck
+
+  dashboard:lint:
+    desc: Lint the dashboard
+    dir: web/dashboard
+    cmds:
+      - npm run -s lint
+
+  dashboard:test:
+    desc: Run dashboard unit/component tests (Vitest)
+    dir: web/dashboard
+    cmds:
+      - npm run -s test
+
+  dashboard:build:
+    desc: Production build of the dashboard
+    dir: web/dashboard
+    cmds:
+      - npm run -s build
+
+  dashboard:e2e:
+    desc: Playwright smoke/E2E (uses the preinstalled Chromium)
+    dir: web/dashboard
+    env:
+      PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH: /opt/pw-browsers/chromium
+    cmds:
+      - npm run -s e2e
+
+  dashboard:dev:
+    desc: Run the dashboard dev server
+    dir: web/dashboard
+    cmds:
+      - npm run dev
+
+  dashboard:ci:
+    desc: Full local dashboard gate (typecheck + test + build)
+    cmds:
+      - task: dashboard:typecheck
+      - task: dashboard:test
+      - task: dashboard:build

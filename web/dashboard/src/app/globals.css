@@ -1,0 +1,19 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+html,
+body {
+  background-color: #f6f3ec;
+  color: #17212e;
+}
+
+/* Visible focus for keyboard navigation (accessibility, doc §4.7). */
+:focus-visible {
+  outline: 2px solid #0f766e;
+  outline-offset: 2px;
+}

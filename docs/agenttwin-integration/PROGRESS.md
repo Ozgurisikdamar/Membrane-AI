@@ -210,7 +210,7 @@ The owner requested a real Membrane AI product dashboard and a Netlify-ready dem
 | Dashboard phase | Status | Required evidence |
 |---|---|---|
 | D0 — Baseline/UI/API/deployment inventory | `DONE` (2026-10-30) | Frontend/API/auth/deploy audited (§11.1); framework = Next.js; live/demo/unavailable data contract (§11.2) |
-| D1 — Dashboard foundation | `NOT_STARTED` | App shell, responsive layout, typed data providers, states, tests, production build |
+| D1 — Dashboard foundation | `DONE` (2026-10-30) | Next.js app shell + 9-section nav, Membrane tokens, demo/live DataSource + states; 12 Vitest tests pass; production build OK (12 routes) |
 | D2 — Agent Assurance dashboard | `NOT_STARTED` | Evaluation/trace/scenario/release views backed by real or labelled synthetic evidence |
 | D3 — Code Governance integration | `NOT_STARTED` | Combined code + agent evidence, backend authorization and tenant-isolation tests |
 | D4 — Netlify demo readiness | `NOT_STARTED` | Verified build/publish paths, config, headers, environment inventory, successful preview |
@@ -263,6 +263,21 @@ seeds shown) and are never presented as live.
 - Connected mode requires verified backend authentication, tenant/project authorization, HTTPS, CORS, secret handling and end-to-end tests.
 - A successful static Netlify deploy must never be reported as connected production readiness.
 - No deployment has been attempted as part of this planning update.
+
+### 2026-10-30 — D1 dashboard foundation (DONE)
+
+- Status: Dashboard **D1 = DONE**; D2 next. Pushed to `main`.
+- Frontend framework/version + package manager: **Next.js 15.5.28** (App Router, patched line — avoids CVE-2025-66478), React 19.0.0, TypeScript 5.7.3, Tailwind 3.4.17; **npm** with pinned `package-lock.json`. App lives in `web/dashboard/`.
+- Build command + output dir: `npm run build` (`next build`) → `web/dashboard/.next` (12 routes, all static-prerendered). Dev: `npm run dev`. Task group: `task dashboard:{install,typecheck,lint,test,build,e2e,dev,ci}`.
+- Files/screens delivered: app shell (sidebar nav + header + mode toggle), 9 routes (Overview live demo-data; Settings real connectivity view; the other 7 as honest **Planned** states tagged with their phase). Design tokens reuse the Membrane teal brand + shield logo.
+- Data source per screen: Overview = demo fixtures (badged DEMO) / unavailable in live-without-backend; Settings = local mode + connectivity (no secrets); others = Planned (no data yet). Every panel renders a `SourceBadge` (live/demo/unavailable); persistent DEMO banner in demo mode.
+- DataSource abstraction: `DemoDataSource` (deterministic fixtures derived from the real Phase-0 runs — 1.3.0 BLOCK / 1.3.1 PASS, deterministic-fake, seeds shown) + `LiveDataSource` (same-origin BFF `/api/bff/*`, returns `unavailable` on unreachable backend, never throws). Mode default = demo (safe static deploy).
+- API endpoints actually verified this phase: none live yet (D1 is the foundation; the BFF routes + AgentTwin mapping land in D2). `LiveDataSource` contract defined against `/api/bff/{overview,eval-runs,eval-runs/:id}`.
+- Tests: **12 Vitest tests pass** (datasource provenance/determinism/lookup; data-state views; app-shell renders all 9 sections + demo-banner toggles with mode). `npm run typecheck` clean; `npm run build` succeeds. No E2E yet (D2+). Browser/device coverage: none yet.
+- Accessibility/responsive: visible focus ring, semantic headings, `aria-current` nav, table captions, roles on state views; responsive sidebar (hidden &lt;md, header logo on mobile). Full a11y/responsive audit deferred to D5.
+- Netlify config path + deployment mode: not yet (D4). Env var names only (never values): `AGENTTWIN_BASE_URL`, `AGENTTWIN_API_KEY` (server-side only; never `NEXT_PUBLIC_*`).
+- Known limitations / blockers: live mode shows "not connected" until a backend + BFF exist (D2) and a reachable deployment exists (D4/Mode B); no secrets in the browser by design.
+- Next action: D2 — build the BFF routes (server-side credential, allowlisted AgentTwin base URL) + real Agent Assurance views (overview, eval baseline/candidate, scenario/trace/state-diff, release detail) with Playwright journeys.
 
 ### 2026-10-30 — D0 dashboard baseline & scope (DONE)
 

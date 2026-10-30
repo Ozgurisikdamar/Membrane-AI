@@ -1,0 +1,14 @@
+# dependencies
+/node_modules
+# next
+/.next/
+/out/
+next-env.d.ts
+# test / build artifacts
+/coverage
+/playwright-report
+/test-results
+/.swc
+*.tsbuildinfo
+# env
+.env*.local
