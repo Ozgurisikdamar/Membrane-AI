@@ -214,12 +214,15 @@ No numeric risk score may override a hard BLOCK. Any risk index must expose its 
 
 **Exit:** reproducible cold-start demo and documented limitations.
 
+### Dashboard & Netlify delivery — explicit parallel workstream
+
+Follow [DASHBOARD_AND_NETLIFY_WORKFLOW.md](DASHBOARD_AND_NETLIFY_WORKFLOW.md). Its D0–D5 gates cover baseline inventory, dashboard foundation, functional Agent Assurance views, Code Governance integration, Netlify demo readiness and final acceptance. Keep dashboard statuses separate from AgentTwin integration phases. Static demo deployment does not imply connected production readiness.
+
 ### Later — do not pre-empt MVP
 
 - [ ] AgentTwin graph/change impact + blast radius.
 - [ ] Production regression mining and reviewed promotion.
 - [ ] Runtime tool-action governance and approvals.
-- [ ] Unified web dashboard beyond CLI/report/deep link.
 - [ ] Integrated enterprise tenant/load/chaos/SSRF/retention hardening.
 
 ## 7. Test and failure matrix
