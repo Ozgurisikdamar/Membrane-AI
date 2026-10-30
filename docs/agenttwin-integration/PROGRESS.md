@@ -19,7 +19,7 @@
 | Membrane working branch | `main` (owner directed this workstream to develop on and push to `main`, superseding the work order §1.4 `feature/agenttwin-assurance` policy) |
 | Membrane HEAD (Phase 0 inspection, 2026-10-30) | `aedc1ed4014a684868ef3a339ea1d6d5df8235e0` (== `origin/main`; supersedes the 2026-09-26 `b8e8cfd…` baseline) |
 | AgentTwin reference commit (verified 2026-10-30) | `1e8fd0ebc344281eff6c2d2dd45bd423b8d11a5f` (local HEAD == documented reference; read-only) |
-| `feature/agenttwin-assurance` | Does **not** exist locally or on `origin` in the inspected clone; not used (owner directed `main`). |
+| `feature/agenttwin-assurance` | Exists on `origin` (carried the dashboard work-order docs); **merged into `main`** 2026-10-30 (merge `080eeb4`). All work consolidated on `main` per owner direction; see §11. |
 | Code changes | Phase 1: new pure contract package `pkg/assurance` (contract/status/allowlist + tests); `pkg/assurance/contracts/` schemas, fixtures, pinned AgentTwin OpenAPI snapshot. No integration I/O yet (Phase 2). |
 | Contract changes | `ReleaseEvidenceV1`, `MappingRecordV1`, `CorrelationContext` (all `schema_version=1.0.0`) + JSON Schemas — new, versioned, design-complete and tested. |
 | Integration tests | Contract/compatibility unit tests in `pkg/assurance` (status mapping, validators, allowlist/SSRF, fixture round-trip, schema↔struct parity, AgentTwin OpenAPI surface). No live integration code yet. |
@@ -209,12 +209,50 @@ The owner requested a real Membrane AI product dashboard and a Netlify-ready dem
 
 | Dashboard phase | Status | Required evidence |
 |---|---|---|
-| D0 — Baseline/UI/API/deployment inventory | `NOT_STARTED` | Current SHAs, frontend inventory, verified API/auth matrix, live/demo/unavailable data contract |
+| D0 — Baseline/UI/API/deployment inventory | `DONE` (2026-10-30) | Frontend/API/auth/deploy audited (§11.1); framework = Next.js; live/demo/unavailable data contract (§11.2) |
 | D1 — Dashboard foundation | `NOT_STARTED` | App shell, responsive layout, typed data providers, states, tests, production build |
 | D2 — Agent Assurance dashboard | `NOT_STARTED` | Evaluation/trace/scenario/release views backed by real or labelled synthetic evidence |
 | D3 — Code Governance integration | `NOT_STARTED` | Combined code + agent evidence, backend authorization and tenant-isolation tests |
 | D4 — Netlify demo readiness | `NOT_STARTED` | Verified build/publish paths, config, headers, environment inventory, successful preview |
 | D5 — Final dashboard acceptance | `NOT_STARTED` | Reproducible runbook, real screenshots, responsive/accessibility/E2E evidence, owner handoff |
+
+### 11.1 D0 audit — current-state inventory (verified 2026-10-30)
+
+Branch reconciliation: `origin/feature/agenttwin-assurance` (which carried the dashboard
+work-order docs, branched from pre-Phase-0 `main`) was **merged into `main`** so `main` now
+carries both the AgentTwin Phase 0/1 work and the dashboard work order. Per owner direction all
+D0–D5 + AgentTwin phases proceed on `main` (this overrides the work order's "push to feature /
+don't merge to main"; recorded here deliberately). Merge commit recorded in the milestone log.
+
+**Frontend reality:** Membrane has **no web frontend / Node / Netlify tooling**. Only assets:
+`docs/landing/index.html` (hand-written static marketing page), the VS Code extension
+(`clients/vscode`, shells the CLI → editor diagnostics), and the CLI HTML/JSON report
+(`clients/cli/internal/report`). Brand tokens to reuse: teal `#0f766e`/`#0d9488`, paper `#f6f3ec`,
+Inter + JetBrains Mono, inline shield-check SVG. → **Framework decision: Next.js (App Router, TS,
+Tailwind) in a new `web/dashboard/`**, mirroring AgentTwin `apps/web`'s BFF architecture.
+
+**Backend read surface (verified):** Membrane HTTP = gateway `:8006` + semantic `:8005`, both
+**POST decision endpoints only** — no GET/list, **no auth, no CORS, no persistence**. Verdicts go
+Kafka→reporter (outbound webhook/commit-status/PR comment). AgentTwin control-plane `:8080` is the
+real live data source (`GET /api/v1/eval-runs[/{id}]`, `/traces`, `/simulations`, `/datasets`,
+`/reviews`, `/judges`, `/agents`), authenticated (dev-login JWT / OIDC / `X-AgentTwin-Api-Key`) via
+a Next.js BFF (token in HttpOnly cookie; no CORS needed). Reusable Membrane models:
+`report.Report` (Code Governance), `pkg/assurance.ReleaseEvidenceV1` (Release Assurance).
+
+### 11.2 Live / demo / unavailable data contract (per dashboard screen)
+
+| Screen / datum | Source today | Treatment |
+|---|---|---|
+| Agent evaluations, baseline/candidate compare | **Live** — AgentTwin `GET /api/v1/eval-runs[/{id}]` (BFF) | live when connected; else demo fixtures from the real Phase-0 runs |
+| Traces, simulations, scenarios, agents | **Live** — AgentTwin `GET /api/v1/{traces,simulations,scenarios,agents}` (BFF) | live when connected; else demo fixtures / deep links |
+| Code-governance verdict (fresh decision) | **Live (decision-only)** — Membrane gateway/semantic POST | optional live call; no history |
+| Code-governance history, severity breakdown | **Demo/fixture** — from real `membrane scan --json`/`Report` | labelled demo; no Membrane read API exists |
+| Release decisions (PASS/WARN/BLOCK), combined gate | **Demo/fixture** — computed via `pkg/assurance` over fixtures | labelled "recommended gate policy / target" (research §5.3); no live backend |
+| Any value when backend unreachable | **Unavailable** | explicit disconnected/stale/not-configured state, never faked |
+
+Rule: every panel carries a source badge (live / demo / unavailable); demo fixtures derive from the
+**real** reproduced runs (1.2.4=9/9, 1.3.0=6/9/2-critical, 1.3.1=9/9; deterministic-fake planner;
+seeds shown) and are never presented as live.
 
 ### Deployment readiness policy
 
@@ -225,6 +263,18 @@ The owner requested a real Membrane AI product dashboard and a Netlify-ready dem
 - Connected mode requires verified backend authentication, tenant/project authorization, HTTPS, CORS, secret handling and end-to-end tests.
 - A successful static Netlify deploy must never be reported as connected production readiness.
 - No deployment has been attempted as part of this planning update.
+
+### 2026-10-30 — D0 dashboard baseline & scope (DONE)
+
+- Status: Dashboard **D0 = DONE**; D1 next. AgentTwin integration still at Phase 1 DONE / Phase 2 next (unchanged).
+- Branch: reconciled onto `main` — merged `origin/feature/agenttwin-assurance` (dashboard work-order docs) into `main`; merge commit `080eeb4`. `main` now carries Phase 0/1 + the dashboard work order; all further work on `main` per owner direction.
+- Scope delivered: D0 audit only (no dashboard code). Verified frontend/API/auth/deploy reality (§11.1), framework decision (Next.js in `web/dashboard/`), and the per-screen live/demo/unavailable data contract (§11.2).
+- Framework/build: none existed; chosen Next.js (App Router, TS, Tailwind) + pinned package manager; Netlify via `@netlify/plugin-nextjs` (D1+). Playwright uses pre-installed Chromium at `/opt/pw-browsers/chromium`.
+- API endpoints verified (read): AgentTwin `GET /api/v1/eval-runs[/{id}]`, `/traces`, `/simulations`, `/scenarios`, `/agents`, `/datasets`, `/reviews`, `/judges` (auth: session JWT / OIDC / `X-AgentTwin-Api-Key`). Membrane: only POST `/v1/gateway/*` + `/v1/semantic/evaluate` (no auth/CORS/history).
+- Tests/build: none this milestone (audit only); existing Membrane gates remain green; `pkg/assurance` builds.
+- Data source per planned screen: see §11.2 table (live vs demo vs unavailable).
+- Security/deploy blockers recorded: no public backend + no Membrane read API → connected Mode B blocked; Netlify Mode A (demo) is the first target. Tenant identity must stay server-side; browser never holds a privileged credential.
+- Next action: D1 — scaffold `web/dashboard/` Next.js shell + nav + demo/live `DataSource` + states + tests + production build; add `dashboard:*` task group.
 
 ### 2026-10-30 — Dashboard and Netlify scope authorized
 
