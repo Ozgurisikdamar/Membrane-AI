@@ -144,8 +144,8 @@ Phase 0 verification runs (Linux cloud container; Go via full go1.25.0 SDK + `GO
 - Known limitations / blockers: contract is design-complete but not yet wired to a live call (Phase 2); timeouts/size-bounds/redirect-revalidation/DNS-rebinding are designed in THREAT_MODEL but implemented with the adapter in Phase 2; full deterministic gate-rule evaluator is Phase 3; `task helm:lint` still blocked (no helm).
 - Upstream AgentTwin requests: None. Open verification item carried forward: whether AgentTwin offers a production-safe cross-project service credential (Phase 1 §5 item still open).
 - Next actions: Phase 2 — add the typed AgentTwin client port + HTTP adapter in the orchestrator, config/secret handling, deterministic fake adapter for tests, and produce one combined evidence record from a manual CLI/documented action against the reproduced demo.
-- Commit SHA containing this report: recorded on push below.
-- Push status + remote branch: pushed to `origin/main` (SHA appended at push time).
+- Commit SHA containing this report: `61713c3` (Phase 1 contract + docs).
+- Push status + remote branch: pushed to `origin/main` (content commit `61713c3`, with this SHA-record follow-up).
 
 ### 2026-10-30 — Phase 0 baseline revalidation (DONE, verified)
 
