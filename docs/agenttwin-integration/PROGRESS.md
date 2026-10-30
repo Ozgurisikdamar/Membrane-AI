@@ -211,7 +211,7 @@ The owner requested a real Membrane AI product dashboard and a Netlify-ready dem
 |---|---|---|
 | D0 — Baseline/UI/API/deployment inventory | `DONE` (2026-10-30) | Frontend/API/auth/deploy audited (§11.1); framework = Next.js; live/demo/unavailable data contract (§11.2) |
 | D1 — Dashboard foundation | `DONE` (2026-10-30) | Next.js app shell + 9-section nav, Membrane tokens, demo/live DataSource + states; 12 Vitest tests pass; production build OK (12 routes) |
-| D2 — Agent Assurance dashboard | `NOT_STARTED` | Evaluation/trace/scenario/release views backed by real or labelled synthetic evidence |
+| D2 — Agent Assurance dashboard | `DONE` (2026-10-30) | BFF (server-side cred + SSRF allowlist) + live AgentTwin wiring verified; overview/agents/simulations/traces/release views; 27 unit + 4 E2E pass; build green |
 | D3 — Code Governance integration | `NOT_STARTED` | Combined code + agent evidence, backend authorization and tenant-isolation tests |
 | D4 — Netlify demo readiness | `NOT_STARTED` | Verified build/publish paths, config, headers, environment inventory, successful preview |
 | D5 — Final dashboard acceptance | `NOT_STARTED` | Reproducible runbook, real screenshots, responsive/accessibility/E2E evidence, owner handoff |
@@ -263,6 +263,19 @@ seeds shown) and are never presented as live.
 - Connected mode requires verified backend authentication, tenant/project authorization, HTTPS, CORS, secret handling and end-to-end tests.
 - A successful static Netlify deploy must never be reported as connected production readiness.
 - No deployment has been attempted as part of this planning update.
+
+### 2026-10-30 — D2 functional Agent Assurance dashboard (DONE)
+
+- Status: Dashboard **D2 = DONE**; D3 next. Pushed to `main`.
+- Files/screens delivered: BFF routes `src/app/api/bff/{overview,eval-runs,eval-runs/[id],agents,simulations,traces,release/[id]}`; server client `src/lib/server/{agenttwin,allowlist,respond}.ts`; gate logic `src/lib/gate.ts` (TS mirror of pkg/assurance); views Overview, Agent Twin Lab, Simulation Center, Trace Explorer, Release Assurance (list + `/[id]` evidence detail). Agents/Simulations/Traces/Release now real views (were Planned).
+- Data source per screen: **live** (AgentTwin via BFF) for eval-runs, overview, agents, simulations, traces, release detail; **demo** fixtures (real Phase-0 runs) as the default; **unavailable** state when the backend is unreachable. Every panel badged.
+- API endpoints actually verified LIVE (browser→BFF→AgentTwin, server-side `X-AgentTwin-Api-Key`, loopback allowlisted): `GET /api/v1/eval-runs` (→ mapped, gate computed: 1.3.0=BLOCK, 1.3.1=PASS), `GET /api/v1/eval-runs/{id}` (per-scenario), `GET /api/v1/me`+`/projects/{id}/agents`, `GET /api/v1/simulations`, `GET /api/v1/traces`. Overview aggregated from live runs (3 runs: 2 BLOCK, 1 PASS). Release detail: BLOCK + rule AGENT_CRITICAL_SCENARIO + 9 scenarios, all from real data.
+- Security: credential + base URL are server-only env (`AGENTTWIN_BASE_URL`, `AGENTTWIN_API_KEY`, `AGENTTWIN_ALLOW_LOOPBACK`, `AGENTTWIN_ALLOWED_HOSTS`); never in the browser bundle or `NEXT_PUBLIC_*`. BFF enforces an SSRF allowlist (TS mirror of pkg/assurance), bounded 8s timeout + response-size cap. Tenant/project resolved from the authenticated principal (`/api/v1/me`), never from client input.
+- Tests: **27 Vitest** (gate fail-safe mapping; demo determinism/release derivation; allowlist/SSRF; states; shell) + **4 Playwright E2E** (overview+DEMO banner, full nav, release BLOCK drill-down showing AGENT_CRITICAL_SCENARIO + refund-tool-success-lie, live-disconnected honest state) — all pass on the preinstalled Chromium. `typecheck` clean; `build` green (7 dynamic BFF function routes + static pages).
+- Accessibility/responsive: table captions, roles on states, source badges, keyboard nav; verified at desktop (1280) + mobile (390) via screenshots.
+- Netlify config/deployment mode: not yet (D4). Env var names only (never values) as above.
+- Known limitations: Code Governance history + live Release decision persistence still demo/fixture (no Membrane read API — D0 gap); live combined evidence uses code_verdict=PASS placeholder until Membrane code data is wired (D3 / AgentTwin-integration Phase 2). AgentTwin stays read-only. Netlify static demo ≠ connected production.
+- Next action: D3 — Code Governance views from the CLI `Report`/scan JSON + live gateway decisions; unify code + agent under one release/correlation identity; backend tenant/authz tests; interleave AgentTwin-integration Phase 2 (orchestrator client/adapter) to back live combined evidence.
 
 ### 2026-10-30 — D1 dashboard foundation (DONE)
 

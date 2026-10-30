@@ -62,6 +62,67 @@ export interface OverviewStats {
   lastEvalAt?: string;
 }
 
+export interface ScenarioOutcome {
+  scenario: string;
+  status: string;
+  severity: string;
+  evidenceUrls?: Record<string, string>;
+}
+
+export interface EvalRunDetail extends EvalRunSummary {
+  datasetName: string;
+  simulationPairIds: string[];
+  perScenario: ScenarioOutcome[];
+}
+
+export interface AgentVersion {
+  version: string;
+  model: string;
+  manifestSha?: string;
+  promptSha?: string;
+  createdAt?: string;
+}
+
+export interface AgentSummary {
+  agentId: string;
+  versions: AgentVersion[];
+}
+
+export interface SimulationSummary {
+  runId: string;
+  version: string;
+  cases: number;
+  passed: number;
+  failed: number;
+  criticalFailures: number;
+  status: string;
+  createdAt: string;
+}
+
+export interface TraceRef {
+  traceId: string;
+  agentVersion?: string;
+  outcome?: string;
+  verified?: boolean;
+  /** Canonical deep link into the AgentTwin trace explorer. */
+  deepLink?: string;
+}
+
+export interface ReleaseView {
+  evalRun: EvalRunDetail;
+  codeVerdict: GateDecision;
+  codeFindings: { blocking: number; warning: number; info: number };
+  gate: { decision: GateDecision; triggeredRules: string[]; reasons: string[] };
+  correlation: {
+    repository: string;
+    commitSha: string;
+    agentId: string;
+    baselineVersion: string;
+    candidateVersion: string;
+    evaluationRunId: string;
+  };
+}
+
 /**
  * The single data boundary every screen uses. Implementations: DemoDataSource
  * (local deterministic fixtures) and LiveDataSource (BFF → backend). A method
@@ -72,4 +133,9 @@ export interface DataSource {
   overview(): Promise<Sourced<OverviewStats>>;
   evalRuns(): Promise<Sourced<EvalRunSummary[]>>;
   evalRun(id: string): Promise<Sourced<EvalRunSummary | null>>;
+  evalRunDetail(id: string): Promise<Sourced<EvalRunDetail | null>>;
+  agents(): Promise<Sourced<AgentSummary[]>>;
+  simulations(): Promise<Sourced<SimulationSummary[]>>;
+  traces(): Promise<Sourced<TraceRef[]>>;
+  release(id: string): Promise<Sourced<ReleaseView | null>>;
 }
