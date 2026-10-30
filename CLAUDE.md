@@ -55,6 +55,10 @@ When the user says **"devam et"** (or "continue", or gives no specific instructi
 | `docs/SKILLS.md` | Engineering playbook: toolchain install, every `task` command, local dev, codegen, "add a service" checklist. |
 | `docs/DECISIONS.md` | ADR-lite log of settled decisions. Do not relitigate. |
 | `docs/report/report.md` | Full product/business/technical master report (markdown + figures). |
+| `docs/research/MembraneAI_AgentTwin_Birlesik_Platform_Arastirma_ve_Demo_Tasarimi.md` | Membrane AI + AgentTwin product research, competitive analysis, target architecture and demo design. |
+| `docs/agenttwin-integration/CLAUDE.md` | Binding, scoped Claude work order for the AgentTwin integration; read this for that workstream. |
+| `docs/agenttwin-integration/IMPLEMENTATION_PLAN.md` | Phased integration plan, versioned evidence contract and acceptance criteria. |
+| `docs/agenttwin-integration/PROGRESS.md` | Living status/evidence report; update and publish at each integration milestone. |
 | `docs/blueprint/blueprint.md` | Visual system blueprint: story flow, architecture, sequence, data, deployment. |
 | `docs/*.docx` | Human-facing Word versions of the two documents above. |
 
@@ -85,3 +89,4 @@ When the user says **"devam et"** (or "continue", or gives no specific instructi
 - Prefer doing over asking — the docs answer almost everything.
 - When you learn a fact future sessions need, write it into the right doc (HANDOVER = state,
   DECISIONS = choices, SKILLS = commands). Never leave it only in chat.
+- **AgentTwin integration workstream:** follow `docs/agenttwin-integration/CLAUDE.md` and keep `docs/agenttwin-integration/PROGRESS.md` current. The owner has explicitly authorized milestone commits/pushes for this scoped workstream to `feature/agenttwin-assurance`; do not push its implementation to `main`, merge, open/merge a PR, or modify the AgentTwin repository without separate approval. This exception does not alter the push policy for unrelated work.
