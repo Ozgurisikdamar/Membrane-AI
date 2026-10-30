@@ -142,8 +142,8 @@ Phase 0 verification runs (Linux cloud container; Go via full go1.25.0 SDK + `GO
 - Known limitations / blockers: live stack needed Docker (daemon started) and a `mirror.gcr.io` registry mirror to bypass Docker Hub 429 rate-limiting on this egress IP; `web` UI + prometheus/grafana were excluded from the run (not needed for the eval); `task helm:lint` blocked (no helm). AgentTwin has no release-gate / blast-radius / regression-miner / runtime-gateway yet — the combined PASS/WARN/BLOCK gate therefore lives on the Membrane side (Phase 3). Cross-project service credential for AgentTwin not yet confirmed (Phase 1).
 - Upstream AgentTwin requests: None. (AgentTwin unchanged; read-only respected.)
 - Next actions: Phase 1 — define versioned mapping + release-evidence contracts and threat model; write the integration ADR; add checked-in AgentTwin OpenAPI fixtures + compatibility tests; choose the narrowest Membrane adapter boundary. Do not start Phase 2 code before contracts/threat model are reviewed.
-- Commit SHA containing this report: recorded on push below.
-- Push status + remote branch: committed and pushed to `origin/main` (see commit SHA line appended at push time).
+- Commit SHA containing this report: `9fba113` (Phase 0 report + plan/handover updates).
+- Push status + remote branch: pushed to `origin/main` (content commit `9fba113`, with this SHA-record follow-up).
 
 ### 2026-10-30 — Planning package prepared
 
