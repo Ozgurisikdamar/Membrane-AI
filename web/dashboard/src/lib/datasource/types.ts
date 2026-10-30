@@ -123,6 +123,24 @@ export interface ReleaseView {
   };
 }
 
+/**
+ * One row of the Release Assurance list: a persisted combined release-evidence
+ * record (pkg/assurance.ReleaseEvidenceV1). Unlike EvalRunSummary this carries
+ * the REAL code verdict and the combined gate, keyed by the Membrane release id.
+ */
+export interface ReleaseSummary {
+  releaseId: string;
+  agentId: string;
+  baselineVersion: string;
+  candidateVersion: string;
+  newCriticalFailures: number;
+  codeVerdict: GateDecision;
+  gate: GateDecision;
+  repository: string;
+  commitSha: string;
+  createdAt: string;
+}
+
 export interface CodeFinding {
   file: string;
   line: number;
@@ -175,6 +193,8 @@ export interface DataSource {
   agents(): Promise<Sourced<AgentSummary[]>>;
   simulations(): Promise<Sourced<SimulationSummary[]>>;
   traces(): Promise<Sourced<TraceRef[]>>;
+  /** Persisted combined release-evidence records (real code verdict + gate). */
+  releases(): Promise<Sourced<ReleaseSummary[]>>;
   release(id: string): Promise<Sourced<ReleaseView | null>>;
   codeGovernance(): Promise<Sourced<CodeGovernanceReport | null>>;
   policyDecisions(): Promise<Sourced<PolicyDecision[]>>;

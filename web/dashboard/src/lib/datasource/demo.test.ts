@@ -62,6 +62,18 @@ describe("DemoDataSource", () => {
     expect(r?.findings.some((f) => f.excerpt.includes("[MASKED:"))).toBe(true);
   });
 
+  it("lists releases with a code verdict and a combined gate, linkable by id", async () => {
+    const { value, source } = await ds.releases();
+    expect(source).toBe("demo");
+    const byCand = Object.fromEntries(value.map((r) => [r.candidateVersion, r]));
+    expect(byCand["1.3.0"].gate).toBe("BLOCK");
+    expect(byCand["1.3.1"].gate).toBe("PASS");
+    expect(byCand["1.3.0"].codeVerdict).toBe("PASS");
+    // The list id resolves through release() so the "Evidence →" link works.
+    const rel = (await ds.release(byCand["1.3.0"].releaseId)).value;
+    expect(rel?.gate.decision).toBe("BLOCK");
+  });
+
   it("exposes gateway policy decisions including a deny", async () => {
     const d = (await ds.policyDecisions()).value;
     expect(d.some((x) => x.decision === "deny")).toBe(true);

@@ -8,6 +8,7 @@ import type {
   SimulationSummary,
   TraceRef,
   ReleaseView,
+  ReleaseSummary,
   ScenarioOutcome,
   CodeGovernanceReport,
   PolicyDecision,
@@ -76,6 +77,26 @@ export class DemoDataSource implements DataSource {
 
   async traces(): Promise<Sourced<TraceRef[]>> {
     return demo<TraceRef[]>(demoTraces, NOTE);
+  }
+
+  async releases(): Promise<Sourced<ReleaseSummary[]>> {
+    // Mirror the demo detail view: the synthetic Phase-0 scan was clean for
+    // these agent changes, so the demo code verdict is PASS and the combined
+    // gate is driven by the agent-assurance result. Keyed by eval-run id so the
+    // "Evidence →" link resolves through release().
+    const rows: ReleaseSummary[] = demoEvalRuns.map((r) => ({
+      releaseId: r.evalRunId,
+      agentId: r.agentId,
+      baselineVersion: r.baselineVersion,
+      candidateVersion: r.candidateVersion,
+      newCriticalFailures: r.counts.NEW_CRITICAL_FAILURE,
+      codeVerdict: "PASS",
+      gate: r.gate,
+      repository: "Ozgurisikdamar/demo-co-support-agent",
+      commitSha: "aedc1ed4014a684868ef3a339ea1d6d5df8235e0",
+      createdAt: r.createdAt,
+    }));
+    return demo<ReleaseSummary[]>(rows, NOTE);
   }
 
   async release(id: string): Promise<Sourced<ReleaseView | null>> {

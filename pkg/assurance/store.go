@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 
@@ -20,6 +21,18 @@ import (
 type EvidenceStore interface {
 	Put(ev ReleaseEvidenceV1) error
 	Get(releaseID string) (ReleaseEvidenceV1, error)
+	// List returns every stored record, newest CreatedAt first.
+	List() ([]ReleaseEvidenceV1, error)
+}
+
+// byCreatedDesc sorts evidence newest-first (stable for equal timestamps by id).
+func byCreatedDesc(xs []ReleaseEvidenceV1) {
+	sort.SliceStable(xs, func(i, j int) bool {
+		if xs[i].CreatedAt.Equal(xs[j].CreatedAt) {
+			return xs[i].ReleaseID < xs[j].ReleaseID
+		}
+		return xs[i].CreatedAt.After(xs[j].CreatedAt)
+	})
 }
 
 // MemStore is an in-memory EvidenceStore for tests and ephemeral runs.
@@ -59,6 +72,26 @@ func (m *MemStore) Get(releaseID string) (ReleaseEvidenceV1, error) {
 		return ReleaseEvidenceV1{}, errs.NotFound(Op+".MemStore.Get", "no evidence for release "+releaseID, nil)
 	}
 	return decodeEvidence(Op+".MemStore.Get", b)
+}
+
+// List returns every stored record, newest first.
+func (m *MemStore) List() ([]ReleaseEvidenceV1, error) {
+	m.mu.RLock()
+	blobs := make([][]byte, 0, len(m.data))
+	for _, b := range m.data {
+		blobs = append(blobs, b)
+	}
+	m.mu.RUnlock()
+	out := make([]ReleaseEvidenceV1, 0, len(blobs))
+	for _, b := range blobs {
+		ev, err := decodeEvidence(Op+".MemStore.List", b)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, ev)
+	}
+	byCreatedDesc(out)
+	return out, nil
 }
 
 // FileStore is a write-once filesystem EvidenceStore: one JSON file per
@@ -121,6 +154,32 @@ func (f *FileStore) Get(releaseID string) (ReleaseEvidenceV1, error) {
 		return ReleaseEvidenceV1{}, errs.Internal(op, "read evidence", err)
 	}
 	return decodeEvidence(op, b)
+}
+
+// List reads and decodes every stored record, newest first.
+func (f *FileStore) List() ([]ReleaseEvidenceV1, error) {
+	const op = Op + ".FileStore.List"
+	entries, err := os.ReadDir(f.dir)
+	if err != nil {
+		return nil, errs.Internal(op, "read store dir", err)
+	}
+	var out []ReleaseEvidenceV1
+	for _, e := range entries {
+		if e.IsDir() || !strings.HasSuffix(e.Name(), ".json") {
+			continue
+		}
+		b, rerr := os.ReadFile(filepath.Join(f.dir, e.Name())) //nolint:gosec // G304: file under the store dir
+		if rerr != nil {
+			return nil, errs.Internal(op, "read evidence", rerr)
+		}
+		ev, derr := decodeEvidence(op, b)
+		if derr != nil {
+			return nil, derr
+		}
+		out = append(out, ev)
+	}
+	byCreatedDesc(out)
+	return out, nil
 }
 
 func decodeEvidence(op string, b []byte) (ReleaseEvidenceV1, error) {

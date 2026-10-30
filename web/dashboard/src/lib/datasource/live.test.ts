@@ -36,4 +36,17 @@ describe("LiveDataSource honesty", () => {
     const r = await ds.evalRuns();
     expect(r.source).toBe("live");
   });
+
+  it("releases(): 503 (evidence API not configured) resolves to unavailable, not a crash", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 503, statusText: "Service Unavailable" }));
+    const r = await ds.releases();
+    expect(r.source).toBe("unavailable");
+    expect(r.value).toEqual([]);
+  });
+
+  it("releases(): live-sourced when the evidence BFF responds OK", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => [] }));
+    const r = await ds.releases();
+    expect(r.source).toBe("live");
+  });
 });

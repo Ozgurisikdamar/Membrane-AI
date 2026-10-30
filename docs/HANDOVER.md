@@ -3,16 +3,35 @@
 > **On "devam et": read this file, then do "Next up". Update this file before the session ends.**
 > Keep it short and current — this is state, not history.
 
-_Last updated: 2026-10-30 — session: **AgentTwin integration Phase 0–5 DONE + dashboard D0–D5 DONE** (all on `main`).
+_Last updated: 2026-10-30 — session: **Membrane evidence read API + dashboard live Release Assurance DONE** (on `main`,
+verified live end-to-end). Closes the biggest D0 honesty gap: the dashboard now shows the **real persisted combined release
+evidence (real code verdict)** instead of the AgentTwin-only view with a `PASS` placeholder. New: `pkg/assurance.EvidenceStore.List()`
+on the port + both adapters (newest-first) with a table test; **`pkg/cmd/evidence-api`** — an authenticated, read-only HTTP server
+over the immutable store (`GET /healthz`, `/v1/releases`[`?project=`], `/v1/releases/{id}`; `X-Membrane-Api-Key` constant-time auth;
+canonical JSON; `httptest` handler tests). Dashboard: server-only `src/lib/server/membrane.ts` (evidence-API client, SSRF allowlist,
+deadline+size caps, `MembraneNotFoundError`) + pure `membrane-map.ts` + BFF `/api/bff/membrane-releases[/:id]` (release detail now
+prefers Membrane evidence when `MEMBRANE_EVIDENCE_URL` set, falls back to AgentTwin-only otherwise) + `DataSource.releases()` on live+demo
++ reworked Release Assurance list (Code verdict + combined Gate from persisted evidence, honest `unavailable` state). **Verified live:**
+evidence-api over the Phase-5 store → dashboard (`next start`) in live mode rendered **1.3.0 BLOCK (code BLOCK, 2 new critical) / 1.3.1 PASS**,
+detail `rel-aedc1ed4` → Combined gate BLOCK + code verdict "BLOCK (5 blocking)" + 9 real scenarios; 0 console errors; **no API key in the
+client bundle**; mobile no overflow. Gates: Go `build/test/lint` green (`pkg/assurance` 89.3% cov; evidence-api handlers tested); dashboard
+41 Vitest + ESLint + `tsc` + `next build` green.
+**Next up (owner/later):** deploy `evidence-api` beside the Netlify dashboard (real key + TLS + allowlisted host) so the live dashboard
+shows real evidence in production; Netlify Mode A deploy (`web/dashboard/NETLIFY.md`); later — DB-backed per-tenant `EvidenceStore`,
+orchestrator Saga auto-producing evidence on release. To run locally: `MEMBRANE_EVIDENCE_STORE_DIR=<dir> MEMBRANE_EVIDENCE_API_KEY=<k>
+go run ./pkg/cmd/evidence-api` then dashboard with `MEMBRANE_EVIDENCE_URL=http://127.0.0.1:8007 MEMBRANE_EVIDENCE_API_KEY=<k>
+MEMBRANE_EVIDENCE_ALLOW_LOOPBACK=1`. Toolchain: full go1.25 SDK (GOWORK=off to build `pkg` standalone — the go.work pins `go 1.25`
+while modules need `>=1.25.0`); Node 22 for the dashboard. Core Membrane roadmap unchanged. Full detail + commit SHAs in
+`docs/agenttwin-integration/PROGRESS.md` §1/§9._
+
+_Previous: 2026-10-30 — session: **AgentTwin integration Phase 0–5 DONE + dashboard D0–D5 DONE** (all on `main`).
 The full code→agent→release→SCM evidence chain works end-to-end, verified live: `membrane scan` → Go `release-evidence`
 command (HTTP client → real AgentTwin eval → `BuildReleaseEvidence` fail-safe gate) → immutable `EvidenceStore` (deterministic
 byte-identical regeneration) → shadow-mode SCM publish (idempotent GitHub commit-status; enforcement opt-in). Golden path:
 **1.3.0 (regressed) + secret scan → BLOCK**, **1.3.1 (fixed) + clean scan → PASS**. `pkg/assurance` (contract+status+allowlist+
 builder+client+httpclient+store+render+scm+scmgithub, ~90% cov) + `pkg/cmd/release-evidence`. The product dashboard lives at
 `web/dashboard/` (Next.js, demo+live, 33 Vitest + 7 E2E, Netlify config + runbook). Runbook: `docs/agenttwin-integration/DEMO_RUNBOOK.md`.
-**Next up:** owner review + Netlify deploy (Mode A, `web/dashboard/NETLIFY.md`). Later/optional: wire the combined gate into the
-orchestrator/reporter Kafka consumer (auto-trigger + metrics) and a DB-backed `EvidenceStore`. Toolchain: full go1.25 SDK for
-covdata; mirror.gcr.io for the AgentTwin stack; Node 22 for the dashboard. Core Membrane roadmap unchanged. Full detail + commit
+Toolchain: full go1.25 SDK for covdata; mirror.gcr.io for the AgentTwin stack; Node 22 for the dashboard. Full detail + commit
 SHAs in `docs/agenttwin-integration/PROGRESS.md` §6/§9/§11._
 
 _Previous: 2026-10-30 — session: **Membrane dashboard D0–D5 DONE** + AgentTwin integration Phase 2 slice.

@@ -1,6 +1,6 @@
 # AgentTwin Integration — Living Progress Report
 
-**Status:** `IN_PROGRESS` — AgentTwin integration **Phase 0–5 DONE** + dashboard **D0–D5 DONE** (all on `main`, verified live). Remaining items are owner/later steps (Netlify deploy, orchestrator auto-trigger, DB-backed store) — see §6/§11.  
+**Status:** `IN_PROGRESS` — AgentTwin integration **Phase 0–5 DONE** + dashboard **D0–D5 DONE** + **Membrane evidence read API + live Release Assurance DONE** (all on `main`, verified live end-to-end). Remaining items are owner/later steps (Netlify deploy, orchestrator auto-trigger, DB-backed store) — see §6/§11/§12.  
 **Last updated:** 2026-10-30  
 **Primary repository:** `Ozgurisikdamar/Membrane-AI`  
 **Reference repository:** `Ozgurisikdamar/AgentTwin` (read-only by default)  
@@ -24,8 +24,10 @@
 | Contract changes | `ReleaseEvidenceV1`, `MappingRecordV1`, `CorrelationContext` (all `schema_version=1.0.0`) + JSON Schemas — new, versioned, design-complete and tested. |
 | Integration tests | Contract/compatibility unit tests in `pkg/assurance` (status mapping, validators, allowlist/SSRF, fixture round-trip, schema↔struct parity, AgentTwin OpenAPI surface). No live integration code yet. |
 | Demo run in this workstream | **Reproduced live** in Phase 0 — 1.2.4 vs 1.3.0 (regression) and 1.2.4 vs 1.3.1 (fixed); see §7 and §9 |
-| Membrane quality gates | `task build/test/lint` PASS with the new package (`pkg/assurance` 93.7% coverage); Phase-0 gates still green; `task helm:lint` BLOCKED (helm not installed) |
-| Push status | Phase 0 + Phase 1 committed and pushed to `main` (SHAs in §9 milestone entries) |
+| Membrane quality gates | Go: `go build/test/lint` PASS (`pkg/assurance` 89.3% cov; `pkg/cmd/evidence-api` handlers tested, 46.9% cmd cov); Dashboard: 41 Vitest + ESLint + `tsc --noEmit` + `next build` all green; `task helm:lint` BLOCKED (helm not installed) |
+| Membrane evidence read API | **DONE** — authenticated read-only HTTP server `pkg/cmd/evidence-api` (`GET /healthz`, `/v1/releases`, `/v1/releases/{id}`; `X-Membrane-Api-Key` constant-time auth) over the immutable `EvidenceStore` (new `List()`); closes the D0 "no Membrane read API" gap for release evidence. Verified live against the Phase-5 store (rel-aedc1ed4 BLOCK + rel-b1f1c3d1e5a7b9 PASS). |
+| Dashboard live Release Assurance | **DONE** — new server-only `membrane.ts` client + BFF `/api/bff/membrane-releases[/:id]` + `DataSource.releases()`; the Release Assurance list and detail now show the **real persisted combined evidence (real code verdict, not the PASS placeholder)** when `MEMBRANE_EVIDENCE_URL` is configured. Verified live: dashboard → BFF → evidence API rendered 1.3.0 BLOCK (code BLOCK, 2 new critical) / 1.3.1 PASS, 0 console errors, no secret in client bundle. |
+| Push status | Phase 0 + Phase 1 committed and pushed to `main`; subsequent phases (2–5), dashboard (D0–D5) and this evidence-API milestone committed+pushed to `main` (SHAs in §9) |
 
 ## 2. Planning artifacts published
 
@@ -129,6 +131,23 @@ Phase 0 verification runs (Linux cloud container; Go via full go1.25.0 SDK + `GO
 `None confirmed yet.` Do not modify AgentTwin as a workaround. Add a request only after identifying an actual upstream gap and recording source path, required change, compatibility concern and Membrane-side fallback.
 
 ## 9. Milestone log
+
+### 2026-10-30 — Membrane evidence read API + dashboard live Release Assurance (DONE, verified live)
+
+- Status: `DONE`. Closes the biggest honesty gap from D0: the dashboard's Release Assurance now shows **real persisted combined release evidence (real code verdict)**, not the AgentTwin-only view with a `PASS` placeholder.
+- Membrane branch + HEAD SHA: `main` (push SHA recorded below). AgentTwin reference SHA: `1e8fd0e` (read-only).
+- Scope delivered (implemented + tested):
+  - **`pkg/assurance.EvidenceStore.List()`** added to the port and both adapters (`MemStore`, `FileStore`), newest-`CreatedAt`-first (`byCreatedDesc`); table test over both stores (empty, ordering, newest id).
+  - **`pkg/cmd/evidence-api`** — a minimal, authenticated, **read-only** HTTP server over the immutable store: `GET /healthz` (unauth liveness), `GET /v1/releases` (list, optional `?project=` convenience filter), `GET /v1/releases/{id}` (canonical JSON via `RenderJSON`). Auth: `X-Membrane-Api-Key` with `crypto/subtle.ConstantTimeCompare`; `X-Content-Type-Options: nosniff`; typed-error → status mapping (404/400/500); key never logged. Env: `MEMBRANE_EVIDENCE_STORE_DIR`, `MEMBRANE_EVIDENCE_API_KEY`, `MEMBRANE_EVIDENCE_PORT` (default 8007). `httptest` handler tests: missing/wrong key → 401, list newest-first, project filter, get real combined verdict, 404.
+  - **Dashboard**: server-only `src/lib/server/membrane.ts` (evidence-API client: env config, SSRF allowlist reuse, 8s deadline, 8MiB cap, `MembraneNotFoundError`) + pure `membrane-map.ts` (`ReleaseEvidenceV1` JSON → `ReleaseSummary`/`ReleaseView`, carrying the real code verdict + persisted gate/rules); BFF `GET /api/bff/membrane-releases` (list) and `release/[id]` now prefers Membrane evidence when configured (falls back to AgentTwin-only otherwise); new `DataSource.releases()` on the live + demo providers; Release Assurance list reworked to show Code verdict + combined Gate from persisted evidence with honest `unavailable` state.
+- Exact commands + results: Go — `go build ./...` PASS; `go test -cover ./assurance/... ./cmd/evidence-api/...` PASS (`assurance` **89.3%**, `evidence-api` 46.9%); `golangci-lint run` 0 issues. Dashboard — `vitest run` **41 passed** (incl. new `membrane-map.test.ts`, `releases()` demo/live cases); `next lint` 0; `tsc --noEmit` clean; `next build` success (route `/api/bff/membrane-releases` present).
+- Demo scenario, seed, observed verdicts: evidence-api served the Phase-5 store live; dashboard (prod `next start`, `MEMBRANE_EVIDENCE_URL=http://127.0.0.1:8099`) rendered in **live** mode: list → `1.3.1` PASS (code PASS) + `1.3.0` BLOCK (code BLOCK, 2 new critical), newest-first; detail `rel-aedc1ed4` → Combined gate **BLOCK**, code verdict **BLOCK (5 blocking)**, rules `CODE_CRITICAL`+`AGENT_CRITICAL_SCENARIO`, 9 real scenarios, `deterministicFake=false`; missing id → honest null. Seed `42`.
+- Security/privacy validation: read API is auth-required (constant-time), read-only, no mutation routes; `?project=` is documented as a convenience, not an authorization boundary (prod tenant scope derives from the authenticated key). Dashboard credential stays server-side — grep of `.next/static` confirms **no API key / `X-Membrane-Api-Key` value in the client bundle**; 0 browser console errors; mobile (390px) no horizontal page overflow.
+- Known limitations / blockers: the evidence-api serves a filesystem store (single-node, immutable files) — a DB-backed multi-tenant store with per-key org scoping is a later step; the BFF→evidence-api wiring is verified locally over loopback (prod needs a reachable, allowlisted evidence-api host + TLS). Netlify live deploy remains an owner step. `task helm:lint` still blocked (no helm).
+- Upstream AgentTwin requests: None.
+- Next actions (owner/later): deploy evidence-api beside the Netlify dashboard (or behind the orchestrator) with a real key + TLS; replace the filesystem store with a DB-backed, per-tenant store; wire the orchestrator Saga to auto-produce evidence on release.
+- Commit SHA containing this report: recorded on push below.
+- Push status + remote branch: pushed to `origin/main` (SHA recorded on push).
 
 ### 2026-10-30 — Phase 1 contract & security design (DONE, tested)
 

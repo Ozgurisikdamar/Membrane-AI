@@ -8,6 +8,7 @@ import type {
   SimulationSummary,
   TraceRef,
   ReleaseView,
+  ReleaseSummary,
   GateDecision,
   CodeGovernanceReport,
   PolicyDecision,
@@ -63,6 +64,10 @@ export class LiveDataSource implements DataSource {
   }
   traces() {
     return this.load<TraceRef[]>("/api/bff/traces", []);
+  }
+  releases() {
+    // Real persisted combined evidence from the Membrane evidence read API.
+    return this.load<ReleaseSummary[]>("/api/bff/membrane-releases", []);
   }
   release(id: string) {
     return this.load<ReleaseView | null>(`/api/bff/release/${encodeURIComponent(id)}`, null);
