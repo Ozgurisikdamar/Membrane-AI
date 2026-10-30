@@ -64,8 +64,26 @@ func run() error {
 		allowedHosts = flag.String("allowed-hosts", "", "comma-separated AgentTwin host allowlist")
 		useFake      = flag.Bool("fake", false, "use the deterministic fake (no backend); result is labelled deterministic-fake")
 		out          = flag.String("out", "", "output file prefix; writes <prefix>.json and <prefix>.md (default: JSON to stdout)")
+		store        = flag.String("store", "", "persist the immutable evidence record to this directory")
+		regenerate   = flag.String("regenerate", "", "read a stored record by release id and re-emit it (requires --store); skips scan/eval")
 	)
 	flag.Parse()
+
+	// Deterministic regeneration from the persisted record (no scan/eval needed).
+	if *regenerate != "" {
+		if *store == "" {
+			return fmt.Errorf("--regenerate requires --store")
+		}
+		st, err := assurance.NewFileStore(*store)
+		if err != nil {
+			return err
+		}
+		ev, err := st.Get(*regenerate)
+		if err != nil {
+			return err
+		}
+		return emit(ev, "regenerated from store", *out)
+	}
 
 	if *scanJSON == "" || *repo == "" || *commit == "" {
 		return fmt.Errorf("--scan-json, --repo and --commit are required")
@@ -110,24 +128,39 @@ func run() error {
 		return err
 	}
 
-	jsonBytes, err := json.MarshalIndent(ev, "", "  ")
+	if *store != "" {
+		st, err := assurance.NewFileStore(*store)
+		if err != nil {
+			return err
+		}
+		if err := st.Put(ev); err != nil {
+			return err // immutability conflict or validation error, surfaced honestly
+		}
+		fmt.Fprintln(os.Stderr, "persisted evidence for release "+ev.ReleaseID+" to "+*store)
+	}
+	return emit(ev, label, *out)
+}
+
+// emit renders the canonical JSON/Markdown (deterministic from the record) to
+// stdout or a file prefix.
+func emit(ev assurance.ReleaseEvidenceV1, label, out string) error {
+	jsonBytes, err := assurance.RenderJSON(ev)
 	if err != nil {
 		return err
 	}
-	md := markdown(ev, label)
-
-	if *out == "" {
+	md := assurance.RenderMarkdown(ev)
+	if out == "" {
 		fmt.Println(string(jsonBytes))
 		fmt.Fprintln(os.Stderr, "gate="+string(ev.GateDecision)+" ("+label+")")
 		return nil
 	}
-	if err := os.WriteFile(*out+".json", jsonBytes, 0o600); err != nil { //nolint:gosec // G304: path is an operator-supplied report file
+	if err := os.WriteFile(out+".json", jsonBytes, 0o600); err != nil { //nolint:gosec // G304: operator-supplied report prefix
 		return err
 	}
-	if err := os.WriteFile(*out+".md", []byte(md), 0o600); err != nil { //nolint:gosec // G304: path is an operator-supplied report file
+	if err := os.WriteFile(out+".md", []byte(md), 0o600); err != nil { //nolint:gosec // G304: operator-supplied report prefix
 		return err
 	}
-	fmt.Fprintln(os.Stderr, "wrote "+*out+".json and "+*out+".md · gate="+string(ev.GateDecision)+" ("+label+")")
+	fmt.Fprintln(os.Stderr, "wrote "+out+".json and "+out+".md · gate="+string(ev.GateDecision)+" ("+label+")")
 	return nil
 }
 
@@ -194,24 +227,6 @@ func fakeRef() assurance.EvalResultRef {
 			{Scenario: "refund-timeout-after-mutation", Status: "NEW_CRITICAL_FAILURE", Severity: "critical"},
 		},
 	}
-}
-
-func markdown(ev assurance.ReleaseEvidenceV1, label string) string {
-	var b strings.Builder
-	fmt.Fprintf(&b, "# Release evidence — %s %s → %s\n\n", ev.AgentID, ev.BaselineVersion, ev.CandidateVersion)
-	fmt.Fprintf(&b, "- **Gate decision:** %s\n", ev.GateDecision)
-	fmt.Fprintf(&b, "- Triggered rules: %s\n", strings.Join(ev.TriggeredRules, ", "))
-	fmt.Fprintf(&b, "- Code verdict: %s (%d blocking)\n", ev.CodeVerdict, ev.FindingsSummary["blocking"])
-	fmt.Fprintf(&b, "- Agent eval status: %s · run %s · seed %s\n", ev.OverallStatus, ev.EvaluationRunID, ev.RunSeed)
-	fmt.Fprintf(&b, "- Repository: %s @ %s\n", ev.Repository, ev.CommitSHA)
-	fmt.Fprintf(&b, "- Evidence source: %s\n\n", label)
-	if len(ev.PerScenario) > 0 {
-		b.WriteString("## Scenarios\n\n| Scenario | Severity | Classification |\n| --- | --- | --- |\n")
-		for _, s := range ev.PerScenario {
-			fmt.Fprintf(&b, "| %s | %s | %s |\n", s.Scenario, s.Severity, s.Status)
-		}
-	}
-	return b.String()
 }
 
 func orDefault(v, d string) string {

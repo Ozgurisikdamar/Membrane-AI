@@ -14,7 +14,7 @@
 
 | Field | Value |
 |---|---|
-| Current phase | Dashboard **D0–D5 DONE** (see §11); AgentTwin integration **Phase 0–2 DONE** (client port + HTTP adapter + aggregator + `release-evidence` command, verified live) → **Phase 3 next** (persist evidence) |
+| Current phase | Dashboard **D0–D5 DONE** (see §11); AgentTwin integration **Phase 0–3 DONE** (client+HTTP adapter+aggregator+immutable store+deterministic regen+gate-rule tests; verified live) → **Phase 4 next** (shadow-mode SCM) |
 | Current status | `IN_PROGRESS` |
 | Membrane working branch | `main` (owner directed this workstream to develop on and push to `main`, superseding the work order §1.4 `feature/agenttwin-assurance` policy) |
 | Membrane HEAD (Phase 0 inspection, 2026-10-30) | `aedc1ed4014a684868ef3a339ea1d6d5df8235e0` (== `origin/main`; supersedes the 2026-09-26 `b8e8cfd…` baseline) |
@@ -37,7 +37,7 @@
 - [x] Claude revalidates current repository heads and Phase 0 evidence. (2026-10-30)
 - [x] First integration ADR and contract fixtures. (2026-10-30 — ADR-0001, THREAT_MODEL, CONTRACTS, D-037; `pkg/assurance` + schemas + fixtures + compat tests.)
 - [x] AgentTwin client/adapter. (Phase 2 — 2026-10-30: port + HTTP adapter + fake + `BuildReleaseEvidence` + `release-evidence` command; verified live.)
-- [ ] End-to-end evidence aggregation and release gate. (Aggregator done; persistence + auto-trigger = Phase 3.)
+- [x] End-to-end evidence aggregation and release gate. (Phase 3 — immutable store + deterministic regeneration + gate-rule table tests; 2026-10-30.)
 - [ ] Shadow-mode reporter integration.
 - [ ] Reproducible demo and handoff.
 
@@ -96,7 +96,7 @@ Integration endpoints are now verified against AgentTwin's live OpenAPI + runnin
 | 0 — Baseline revalidation | `DONE` (2026-10-30) | SHAs confirmed; API/contract inventory; Membrane gates green; refund demo reproduced live (1.3.0 regression + 1.3.1 fixed) |
 | 1 — Contract/security design | `DONE` (2026-10-30) | ADR-0001 + D-037; versioned `pkg/assurance` mapping/evidence/correlation contracts + JSON Schemas; THREAT_MODEL (T1–T12); contract/compat tests green (93.7% cov) |
 | 2 — Small vertical slice | `DONE` (2026-10-30) | Typed `AgentTwinClient` port + **HTTP adapter** (allowlist/timeout/size/typed-errors, fake-server tests) + deterministic fake + `BuildReleaseEvidence` + **one-command `release-evidence`** producing a combined code+agent evidence record (JSON/Markdown). **Verified live** against the AgentTwin stack (real eval → BLOCK). Orchestrator Saga auto-wiring + reporter shadow publish are Phase 3/4. |
-| 3 — Evidence + release gate | `NOT_STARTED` | deterministic gate + Markdown/JSON + critical-rule tests |
+| 3 — Evidence + release gate | `DONE` (2026-10-30) | Immutable `EvidenceStore` (FileStore write-once + MemStore) + canonical `RenderJSON`/`RenderMarkdown`; deterministic regeneration (byte-identical, tested); exhaustive gate-rule table test (ERROR/INCOMPLETE/missing never PASS); `release-evidence --store/--regenerate`. |
 | 4 — SCM shadow mode | `NOT_STARTED` | idempotent reporter integration + shadow-mode tests |
 | 5 — Demo hardening/handoff | `NOT_STARTED` | repeatable runbook + exact test evidence |
 | Later — blast radius/regression mining/runtime governance/unified UI | `PLANNED` | separate scope after MVP evidence |
@@ -263,6 +263,19 @@ seeds shown) and are never presented as live.
 - Connected mode requires verified backend authentication, tenant/project authorization, HTTPS, CORS, secret handling and end-to-end tests.
 - A successful static Netlify deploy must never be reported as connected production readiness.
 - No deployment has been attempted as part of this planning update.
+
+### 2026-10-30 — AgentTwin integration Phase 3 evidence aggregation + release gate (DONE)
+
+- Status: AgentTwin integration **Phase 3 = DONE**. Pushed to `main`. Phase 4 (shadow SCM) next.
+- Files (`pkg/assurance`): `store.go` (`EvidenceStore` port + write-once immutable `FileStore` + `MemStore`), `render.go` (`RenderJSON`/`RenderMarkdown` — canonical, deterministic from the record), `store_test.go`, `gate_rules_test.go` (exhaustive matrix). `pkg/cmd/release-evidence` wired with `--store` (persist) and `--regenerate` (read-back + re-emit).
+- Implementation vs design-only: **implemented and tested**. `pkg/assurance` coverage 89.5%; `task build/test/lint` green (0 lint).
+- Exact commands + results:
+  - Persist + regenerate: `release-evidence … --store <dir>` then `--regenerate <release-id>` → **JSON and Markdown byte-identical** to the original (deterministic regeneration from persisted evidence, work order §3). Verified via `diff`.
+  - Immutability: re-storing a **different** record under the same `release_id` → `release evidence is immutable: … already stored with different content` (typed Conflict). Verified live.
+  - Gate-rule table test: every (integration status × code verdict × policy) → expected decision + cited rule; **PASS only for a clean COMPLETED with a non-blocking code verdict**; ERROR/INCOMPLETE/PENDING/BLOCKED/critical never PASS; all catalog rules (CODE_CRITICAL, AGENT_CRITICAL_SCENARIO, NONCRITICAL_REGRESSION, AGENT_EVAL_INCOMPLETE, OPTIONAL_ASSURANCE_UNAVAILABLE, COVERAGE_GAP) are produced.
+- Security/privacy: store refuses to persist an invalid record (fail-safe invariants enforced before write); file records written 0600; no raw spans/prompts/PII (evidence is references/summaries only).
+- Known limitations: evidence is persisted **on demand** via the command (and MemStore in-process); it is **not yet auto-produced by the orchestrator Saga on every submission** (that auto-trigger + SCM publish is Phase 4). A DB-backed store can swap in behind `EvidenceStore` later; the filesystem store is sufficient for the CLI/report demo (no new infra, work order §1.2).
+- Next action: Phase 4 — reuse Membrane's reporter to publish the combined gate in **shadow mode** (non-blocking), idempotent, with status mapping; test retries/duplicate delivery/stale mapping/revoked creds.
 
 ### 2026-10-30 — AgentTwin integration Phase 2 vertical slice (DONE)
 

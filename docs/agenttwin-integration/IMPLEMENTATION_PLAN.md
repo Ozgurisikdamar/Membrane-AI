@@ -183,15 +183,15 @@ No numeric risk score may override a hard BLOCK. Any risk index must expose its 
 
 **Exit:** one command produces code + agent evidence in one Membrane report. **Met** (offline `--fake` + live, gate BLOCK with both rules). Persistence carried to Phase 3.
 
-### Phase 3 — Evidence aggregation and gate
+### Phase 3 — Evidence aggregation and gate — DONE (2026-10-30)
 
-- [ ] Implement deterministic gate rules and table-driven tests.
-- [ ] Ensure error/incomplete/missing required evidence cannot pass.
-- [ ] Generate Markdown and JSON.
-- [ ] Include source hyperlinks and pinned version/seed metadata.
-- [ ] Make report regeneration deterministic.
+- [x] Implement deterministic gate rules and table-driven tests. (`combinedGate` + `gate_rules_test.go` exhaustive matrix.)
+- [x] Ensure error/incomplete/missing required evidence cannot pass. (PASS only for clean COMPLETED; store refuses invalid records.)
+- [x] Generate Markdown and JSON. (`RenderJSON`/`RenderMarkdown`, canonical.)
+- [x] Include source hyperlinks and pinned version/seed metadata. (Evidence carries eval run id, seed, versions, scenario/evidence URLs.)
+- [x] Make report regeneration deterministic. (`--store`/`--regenerate` → byte-identical JSON+MD; immutable `EvidenceStore`.)
 
-**Exit:** every decision can be independently audited.
+**Exit:** every decision can be independently audited. **Met** (immutable persisted evidence + deterministic regeneration + fail-safe gate, all tested).
 
 ### Phase 4 — SCM shadow mode
 
