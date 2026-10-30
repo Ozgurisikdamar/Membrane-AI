@@ -300,3 +300,14 @@ tasks:
       - task: dashboard:typecheck
       - task: dashboard:test
       - task: dashboard:build
+
+  # --- AgentTwin combined release evidence (integration Phase 2) -------------
+  release-evidence:
+    desc: "Combined demo: scan a sample + build release evidence (offline, deterministic-fake AgentTwin eval)"
+    env:
+      GOWORK: "off"
+      CGO_ENABLED: "0"
+    cmds:
+      - task: build:cli
+      - ./bin/membrane scan docs --json --fail-on=never > /tmp/membrane-scan.json || true
+      - cd pkg && go run ./cmd/release-evidence --scan-json /tmp/membrane-scan.json --repo Ozgurisikdamar/Membrane-AI --commit demo000000 --fake

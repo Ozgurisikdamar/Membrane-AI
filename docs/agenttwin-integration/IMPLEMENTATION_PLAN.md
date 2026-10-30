@@ -171,17 +171,17 @@ No numeric risk score may override a hard BLOCK. Any risk index must expose its 
 
 **Exit:** tested contract and threat model; no shared DB/event bus. **Met** (contract tests green; HTTP-only, no shared DB/bus).
 
-### Phase 2 — AgentTwin client and vertical slice
+### Phase 2 — AgentTwin client and vertical slice — DONE (2026-10-30)
 
-- [ ] Add typed client port and HTTP adapter in appropriate Membrane module.
-- [ ] Add configuration and secret reference handling.
-- [ ] Add fake adapter and fake HTTP server tests.
-- [ ] Invoke a real AgentTwin evaluation/pair using verified actual routes.
-- [ ] Persist minimal immutable evidence snapshot.
-- [ ] Link code submission, commit and agent evaluation with correlation ID.
-- [ ] Provide one reproducible demo command/task.
+- [x] Add typed client port and HTTP adapter in appropriate Membrane module. (`pkg/assurance`: `AgentTwinClient` port + `HTTPClient`.)
+- [x] Add configuration and secret reference handling. (`HTTPConfig` base URL+key from config/env; never logged; allowlist-checked.)
+- [x] Add fake adapter and fake HTTP server tests. (`FakeClient` + `httpclient_test.go`: 2xx/401/403/404/409/429/5xx/malformed/timeout/config/allowlist.)
+- [x] Invoke a real AgentTwin evaluation/pair using verified actual routes. (Live: `GET /api/v1/eval-runs/{id}` → real 1.2.4→1.3.0 run `01a18dc0…`.)
+- [ ] Persist minimal immutable evidence snapshot. (Phase 3 — currently produced on demand, not persisted.)
+- [x] Link code submission, commit and agent evaluation with correlation ID. (`BuildReleaseEvidence` correlates code verdict + agent eval.)
+- [x] Provide one reproducible demo command/task. (`pkg/cmd/release-evidence` + `task release-evidence`.)
 
-**Exit:** one command produces code + agent evidence in one Membrane report.
+**Exit:** one command produces code + agent evidence in one Membrane report. **Met** (offline `--fake` + live, gate BLOCK with both rules). Persistence carried to Phase 3.
 
 ### Phase 3 — Evidence aggregation and gate
 

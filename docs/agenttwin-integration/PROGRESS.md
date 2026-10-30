@@ -14,7 +14,7 @@
 
 | Field | Value |
 |---|---|
-| Current phase | Dashboard **D0–D5 DONE** (see §11); AgentTwin integration Phase 1 DONE, **Phase 2 IN_PROGRESS** (evidence builder+port+fake landed; HTTP adapter remains) |
+| Current phase | Dashboard **D0–D5 DONE** (see §11); AgentTwin integration **Phase 0–2 DONE** (client port + HTTP adapter + aggregator + `release-evidence` command, verified live) → **Phase 3 next** (persist evidence) |
 | Current status | `IN_PROGRESS` |
 | Membrane working branch | `main` (owner directed this workstream to develop on and push to `main`, superseding the work order §1.4 `feature/agenttwin-assurance` policy) |
 | Membrane HEAD (Phase 0 inspection, 2026-10-30) | `aedc1ed4014a684868ef3a339ea1d6d5df8235e0` (== `origin/main`; supersedes the 2026-09-26 `b8e8cfd…` baseline) |
@@ -36,8 +36,8 @@
 - [x] Root `CLAUDE.md` linked to scoped instructions and branch/reporting policy.
 - [x] Claude revalidates current repository heads and Phase 0 evidence. (2026-10-30)
 - [x] First integration ADR and contract fixtures. (2026-10-30 — ADR-0001, THREAT_MODEL, CONTRACTS, D-037; `pkg/assurance` + schemas + fixtures + compat tests.)
-- [ ] AgentTwin client/adapter. (Phase 2)
-- [ ] End-to-end evidence aggregation and release gate.
+- [x] AgentTwin client/adapter. (Phase 2 — 2026-10-30: port + HTTP adapter + fake + `BuildReleaseEvidence` + `release-evidence` command; verified live.)
+- [ ] End-to-end evidence aggregation and release gate. (Aggregator done; persistence + auto-trigger = Phase 3.)
 - [ ] Shadow-mode reporter integration.
 - [ ] Reproducible demo and handoff.
 
@@ -95,7 +95,7 @@ Integration endpoints are now verified against AgentTwin's live OpenAPI + runnin
 |---|---|---|
 | 0 — Baseline revalidation | `DONE` (2026-10-30) | SHAs confirmed; API/contract inventory; Membrane gates green; refund demo reproduced live (1.3.0 regression + 1.3.1 fixed) |
 | 1 — Contract/security design | `DONE` (2026-10-30) | ADR-0001 + D-037; versioned `pkg/assurance` mapping/evidence/correlation contracts + JSON Schemas; THREAT_MODEL (T1–T12); contract/compat tests green (93.7% cov) |
-| 2 — Small vertical slice | `IN_PROGRESS` (2026-10-30) | Evidence builder (`BuildReleaseEvidence`) + `AgentTwinClient` port + deterministic fake landed & tested; live AgentTwin already read via the dashboard BFF. **Remaining:** Go HTTP adapter + orchestrator wiring + a one-command CLI combined report. |
+| 2 — Small vertical slice | `DONE` (2026-10-30) | Typed `AgentTwinClient` port + **HTTP adapter** (allowlist/timeout/size/typed-errors, fake-server tests) + deterministic fake + `BuildReleaseEvidence` + **one-command `release-evidence`** producing a combined code+agent evidence record (JSON/Markdown). **Verified live** against the AgentTwin stack (real eval → BLOCK). Orchestrator Saga auto-wiring + reporter shadow publish are Phase 3/4. |
 | 3 — Evidence + release gate | `NOT_STARTED` | deterministic gate + Markdown/JSON + critical-rule tests |
 | 4 — SCM shadow mode | `NOT_STARTED` | idempotent reporter integration + shadow-mode tests |
 | 5 — Demo hardening/handoff | `NOT_STARTED` | repeatable runbook + exact test evidence |
@@ -263,6 +263,18 @@ seeds shown) and are never presented as live.
 - Connected mode requires verified backend authentication, tenant/project authorization, HTTPS, CORS, secret handling and end-to-end tests.
 - A successful static Netlify deploy must never be reported as connected production readiness.
 - No deployment has been attempted as part of this planning update.
+
+### 2026-10-30 — AgentTwin integration Phase 2 vertical slice (DONE)
+
+- Status: AgentTwin integration **Phase 2 = DONE** (smallest working vertical slice). Pushed to `main`.
+- Files (`pkg/assurance`): `httpclient.go` (`HTTPClient` implementing `AgentTwinClient` — base URL+key from config, SSRF allowlist at construction, 8s timeout + 8 MiB response cap, typed errors by status, maps AgentTwin `EvalRunDetail`→`EvalResultRef`), `httpclient_test.go` (fake-server: 2xx/401/403/404/409/429/5xx/malformed/timeout/config/allowlist). `pkg/cmd/release-evidence/main.go` (the one-command combined report). `Taskfile.yml` `task release-evidence` (offline demo).
+- Implementation vs design-only: **implemented and tested** — port + HTTP adapter + fake + aggregator + command. `pkg/assurance` coverage 89.3%, `task build/test/lint` green (0 lint). gosec-clean (NewRequestWithContext+Do pattern; report files 0600).
+- Exact commands + results (Phase 2 exit = one action → code result + real AgentTwin eval ref + combined report):
+  - Offline (no credentials, `--fake`): `go run ./cmd/release-evidence --scan-json <real membrane scan> --fake` → gate **BLOCK**, rules `[CODE_CRITICAL, AGENT_CRITICAL_SCENARIO]`, code BLOCK (5 blocking), agent COMPLETED_WITH_CRITICAL_FAILURE.
+  - **LIVE** (against the running AgentTwin stack, server-side key, loopback allowlisted): `--agenttwin-url http://localhost:8080 --eval-run-id 01a18dc0-a64b-72b6-8857-3f12e8fd161b` → fetched the **real** 1.2.4→1.3.0 eval via the Go HTTP client → combined gate **BLOCK**, 9 scenarios, JSON+Markdown written. Verifies the full code→agent→release evidence path end-to-end from Go.
+- Security/privacy: credential from config/env only, never logged or in errors; SSRF allowlist enforced at construction; bounded timeout + response size; typed errors (401/403→Unauthorized, 404→NotFound, 5xx/timeout→Unavailable, malformed→Internal); fail-safe gate (critical/ERROR/INCOMPLETE never PASS; BLOCK/WARN cite rules).
+- Known limitations: the adapter is invoked by the documented `release-evidence` command (and the dashboard BFF), **not yet auto-wired into the orchestrator Saga**; evidence is produced on demand, **not yet persisted** (Phase 3) nor published to SCM in shadow mode (Phase 4). AgentTwin untouched (read-only).
+- Next action: Phase 3 — persist the release evidence (minimal immutable store) + deterministic gate-rule table tests at the aggregator; then Phase 4 shadow-mode reporter publish.
 
 ### 2026-10-30 — D5 final dashboard acceptance (DONE)
 
