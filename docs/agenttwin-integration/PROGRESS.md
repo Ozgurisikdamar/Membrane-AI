@@ -1,6 +1,6 @@
 # AgentTwin Integration — Living Progress Report
 
-**Status:** `IN_PROGRESS` — Phase 0 (baseline revalidation) complete and verified; Phase 1 next.  
+**Status:** `IN_PROGRESS` — AgentTwin integration **Phase 0–5 DONE** + dashboard **D0–D5 DONE** (all on `main`, verified live). Remaining items are owner/later steps (Netlify deploy, orchestrator auto-trigger, DB-backed store) — see §6/§11.  
 **Last updated:** 2026-10-30  
 **Primary repository:** `Ozgurisikdamar/Membrane-AI`  
 **Reference repository:** `Ozgurisikdamar/AgentTwin` (read-only by default)  
@@ -14,7 +14,7 @@
 
 | Field | Value |
 |---|---|
-| Current phase | Dashboard **D0–D5 DONE** (§11); AgentTwin integration **Phase 0–4 DONE** (client+HTTP adapter+aggregator+immutable store+gate-rule tests+shadow-mode SCM publish; verified live) → **Phase 5 next** (demo hardening/handoff) |
+| Current phase | **Dashboard D0–D5 DONE** (§11); **AgentTwin integration Phase 0–5 DONE** (contract → client+HTTP adapter → aggregator+immutable store → gate-rule tests → shadow SCM → demo runbook; golden path verified live). Remaining = owner steps (Netlify deploy) + later wiring (orchestrator Saga auto-trigger, DB-backed store). |
 | Current status | `IN_PROGRESS` |
 | Membrane working branch | `main` (owner directed this workstream to develop on and push to `main`, superseding the work order §1.4 `feature/agenttwin-assurance` policy) |
 | Membrane HEAD (Phase 0 inspection, 2026-10-30) | `aedc1ed4014a684868ef3a339ea1d6d5df8235e0` (== `origin/main`; supersedes the 2026-09-26 `b8e8cfd…` baseline) |
@@ -39,7 +39,7 @@
 - [x] AgentTwin client/adapter. (Phase 2 — 2026-10-30: port + HTTP adapter + fake + `BuildReleaseEvidence` + `release-evidence` command; verified live.)
 - [x] End-to-end evidence aggregation and release gate. (Phase 3 — immutable store + deterministic regeneration + gate-rule table tests; 2026-10-30.)
 - [x] Shadow-mode reporter integration. (Phase 4 — shadow/enforce mapping + idempotent GitHub commit-status publisher; 2026-10-30.)
-- [ ] Reproducible demo and handoff. (Phase 5)
+- [x] Reproducible demo and handoff. (Phase 5 — `DEMO_RUNBOOK.md`, golden path verified live; 2026-10-30.)
 
 ## 3. Verified initial repository observations
 
@@ -98,7 +98,7 @@ Integration endpoints are now verified against AgentTwin's live OpenAPI + runnin
 | 2 — Small vertical slice | `DONE` (2026-10-30) | Typed `AgentTwinClient` port + **HTTP adapter** (allowlist/timeout/size/typed-errors, fake-server tests) + deterministic fake + `BuildReleaseEvidence` + **one-command `release-evidence`** producing a combined code+agent evidence record (JSON/Markdown). **Verified live** against the AgentTwin stack (real eval → BLOCK). Orchestrator Saga auto-wiring + reporter shadow publish are Phase 3/4. |
 | 3 — Evidence + release gate | `DONE` (2026-10-30) | Immutable `EvidenceStore` (FileStore write-once + MemStore) + canonical `RenderJSON`/`RenderMarkdown`; deterministic regeneration (byte-identical, tested); exhaustive gate-rule table test (ERROR/INCOMPLETE/missing never PASS); `release-evidence --store/--regenerate`. |
 | 4 — SCM shadow mode | `DONE` (2026-10-30) | `MapSCMStatus` (shadow→enforce, D-035) + `Publisher` port + idempotent delivery log + `GitHubStatusPublisher` (fake-server tests: 201/401-revoked/403/404/5xx) + `release-evidence --publish-shadow`. Shadow BLOCK→neutral/non-blocking; enforcement opt-in. |
-| 5 — Demo hardening/handoff | `NOT_STARTED` | repeatable runbook + exact test evidence |
+| 5 — Demo hardening/handoff | `DONE` (2026-10-30) | `DEMO_RUNBOOK.md` (cold-start, golden path, reset, fault-injection, limitations) with real outputs; full gates green; golden path verified live (1.3.0 BLOCK + 1.3.1 PASS + shadow publish + deterministic regen). |
 | Later — blast radius/regression mining/runtime governance/unified UI | `PLANNED` | separate scope after MVP evidence |
 
 ## 7. Test and demo evidence log
@@ -263,6 +263,21 @@ seeds shown) and are never presented as live.
 - Connected mode requires verified backend authentication, tenant/project authorization, HTTPS, CORS, secret handling and end-to-end tests.
 - A successful static Netlify deploy must never be reported as connected production readiness.
 - No deployment has been attempted as part of this planning update.
+
+### 2026-10-30 — AgentTwin integration Phase 5 demo hardening + handoff (DONE)
+
+- Status: AgentTwin integration **Phase 5 = DONE**. Phases 0–5 complete; pushed to `main`.
+- Files: `docs/agenttwin-integration/DEMO_RUNBOOK.md` (cold-start prerequisites, Membrane gates, AgentTwin stack bring-up + seed, the combined golden path with real outputs, dashboard demo/live, fault-injection explanation, honest limitations).
+- Golden path verified **live** end-to-end this milestone (real AgentTwin evals, deterministic-fake planner, seed 42):
+  - Regressed **1.3.0** + secret-laden scan (5 blocking) → combined gate **BLOCK**; shadow publish → `neutral`/`pending` "would BLOCK in enforce mode (CODE_CRITICAL, AGENT_CRITICAL_SCENARIO)".
+  - Fixed **1.3.1** + clean scan (0 blocking) → combined gate **PASS**; shadow publish → `success` "release checks passed".
+  - Store → `--regenerate` → **byte-identical** JSON/MD; two immutable records persisted; mutated re-store refused.
+  - Correlation validation incidentally proven (a non-hex commit was rejected before any publish).
+- Final gates (recorded): `task build/test/lint` green (43 ok pkgs, 0 FAIL, 0 lint); `pkg/assurance` **89.8%**; dashboard **33 Vitest + 7 Playwright E2E** + build green.
+- Security/privacy: synthetic data only; no real side effects; deterministic-fake labelled; secrets masked in scan output and absent from the dashboard bundle; credentials server-side only.
+- Known limitations (carried, honest): `release-evidence` is a documented command (not auto-fired by the orchestrator Saga); filesystem store (DB adapter pluggable later); no Membrane read API for history (dashboard history = demo); Netlify live URL + Mode B = owner's step. These are **later/owner** items, not Phase-0–5 gaps.
+- Definition of done (IMPLEMENTATION_PLAN §9): Phases 0–5 complete; demo repeatable (runbook); code↔agent evidence cross-linked (`ReleaseEvidenceV1` correlation); deterministic gate tests pass; Membrane quality gates pass; this report carries SHAs + exact results; no critical security/privacy issue. **Met**, with the owner/later items above explicitly out of the Phase-0–5 scope.
+- Next action: owner review + Netlify deploy (Mode A). Optional later: wire the combined gate into the orchestrator/reporter Kafka consumer (auto-trigger + metrics) and a DB-backed `EvidenceStore`.
 
 ### 2026-10-30 — AgentTwin integration Phase 4 shadow-mode SCM publish (DONE)
 

@@ -3,7 +3,19 @@
 > **On "devam et": read this file, then do "Next up". Update this file before the session ends.**
 > Keep it short and current — this is state, not history.
 
-_Last updated: 2026-10-30 — session: **Membrane dashboard D0–D5 DONE** + AgentTwin integration Phase 2 slice.
+_Last updated: 2026-10-30 — session: **AgentTwin integration Phase 0–5 DONE + dashboard D0–D5 DONE** (all on `main`).
+The full code→agent→release→SCM evidence chain works end-to-end, verified live: `membrane scan` → Go `release-evidence`
+command (HTTP client → real AgentTwin eval → `BuildReleaseEvidence` fail-safe gate) → immutable `EvidenceStore` (deterministic
+byte-identical regeneration) → shadow-mode SCM publish (idempotent GitHub commit-status; enforcement opt-in). Golden path:
+**1.3.0 (regressed) + secret scan → BLOCK**, **1.3.1 (fixed) + clean scan → PASS**. `pkg/assurance` (contract+status+allowlist+
+builder+client+httpclient+store+render+scm+scmgithub, ~90% cov) + `pkg/cmd/release-evidence`. The product dashboard lives at
+`web/dashboard/` (Next.js, demo+live, 33 Vitest + 7 E2E, Netlify config + runbook). Runbook: `docs/agenttwin-integration/DEMO_RUNBOOK.md`.
+**Next up:** owner review + Netlify deploy (Mode A, `web/dashboard/NETLIFY.md`). Later/optional: wire the combined gate into the
+orchestrator/reporter Kafka consumer (auto-trigger + metrics) and a DB-backed `EvidenceStore`. Toolchain: full go1.25 SDK for
+covdata; mirror.gcr.io for the AgentTwin stack; Node 22 for the dashboard. Core Membrane roadmap unchanged. Full detail + commit
+SHAs in `docs/agenttwin-integration/PROGRESS.md` §6/§9/§11._
+
+_Previous: 2026-10-30 — session: **Membrane dashboard D0–D5 DONE** + AgentTwin integration Phase 2 slice.
 Built a real Next.js product dashboard at `web/dashboard/` (Code Governance + Agent Assurance): 9-section
 nav, demo/live `DataSource`, server-side BFF (`/api/bff/*`, SSRF allowlist, credential never in browser),
 Release Assurance with fail-safe gate reasons, Code Governance from the real `membrane scan` (grade F,

@@ -203,16 +203,16 @@ No numeric risk score may override a hard BLOCK. Any risk index must expose its 
 
 **Exit:** safe, observable, idempotent shadow integration. **Met** (shadow non-blocking, deterministic mapping, idempotent delivery, typed failures — all tested).
 
-### Phase 5 — Demo hardening and handoff
+### Phase 5 — Demo hardening and handoff — DONE (2026-10-30)
 
-- [ ] Add clean setup/reset/run/cleanup procedure.
-- [ ] Add real screenshots/logs only from an actual run.
-- [ ] Test regressed `1.3.0` and fixed `1.3.1` where available.
-- [ ] Run Membrane `task lint`, `task test`, relevant build/eval/contract checks.
-- [ ] Document external AgentTwin runtime and optional provider config.
-- [ ] Update progress, handover and relevant roadmap/ADR entries.
+- [x] Add clean setup/reset/run/cleanup procedure. (`DEMO_RUNBOOK.md` §2 bring-up + reset path.)
+- [x] Add real screenshots/logs only from an actual run. (Runbook carries real command outputs; dashboard screenshots sent in D2/D5.)
+- [x] Test regressed `1.3.0` and fixed `1.3.1` where available. (Live: 1.3.0 → BLOCK, 1.3.1 → PASS; both shadow-published.)
+- [x] Run Membrane `task lint`, `task test`, relevant build/eval/contract checks. (All green: 43 ok pkgs, 0 FAIL, 0 lint; dashboard 33+7.)
+- [x] Document external AgentTwin runtime and optional provider config. (Runbook §0/§2 + env inventory in NETLIFY.md.)
+- [x] Update progress, handover and relevant roadmap/ADR entries. (This commit.)
 
-**Exit:** reproducible cold-start demo and documented limitations.
+**Exit:** reproducible cold-start demo and documented limitations. **Met.**
 
 ### Dashboard & Netlify delivery — explicit parallel workstream
 
