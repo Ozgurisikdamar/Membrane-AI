@@ -24,7 +24,7 @@
 | Contract changes | None |
 | Integration tests | None — no integration code exists yet |
 | Demo run in this workstream | Not run; Phase 0 must reproduce baseline |
-| Latest progress-report commit | To be filled after this report is committed |
+| Initial progress-report publication | `38edf6e1076bd84b71896844e4e9a11c4df9acb3` |
 | Push status | Planning documents on Membrane `main`; subsequent milestone work goes to dedicated feature branch |
 
 The SHAs above are GitHub `main` heads observed during initial inspection. Claude must re-read current heads before using them as implementation baselines.
@@ -121,6 +121,7 @@ No integration test/demo command has been executed yet. Claude must add one row 
 
 - Added research report, detailed Claude work order, implementation plan and this living report to Membrane AI.
 - Added a scoped pointer in root `CLAUDE.md` so future Claude sessions discover the task instructions.
+- Published repository commits: root CLAUDE pointer `c5258397d3b3e049a25076fb39ec7eb97accbf79`; research report `e02f5797ef690ff393194448acf736c7bb8020a5`; Claude work order `43a6c56575e59907b4db0253461bef76cb0a8431`; implementation plan `20eb9a0233eb9217d406a4242989a95174e5c496`; initial progress report `38edf6e1076bd84b71896844e4e9a11c4df9acb3`.
 - No application code, AgentTwin files, API contracts or runtime configuration changed.
 - No tests/demo run; this publication is documentation-only.
 - Next: Claude executes Phase 0, verifies current heads/contracts, reproduces refund demo and records actual evidence here.
