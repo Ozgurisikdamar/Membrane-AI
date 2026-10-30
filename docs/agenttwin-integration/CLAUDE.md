@@ -7,7 +7,8 @@
 **Reference repository (read-only by default):** https://github.com/Ozgurisikdamar/AgentTwin  
 **Research baseline:** [research report](../research/MembraneAI_AgentTwin_Birlesik_Platform_Arastirma_ve_Demo_Tasarimi.md)  
 **Living status report:** [PROGRESS.md](PROGRESS.md)  
-**Implementation plan:** [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md)
+**Implementation plan:** [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md)  
+**Dashboard + deployment work order:** [DASHBOARD_AND_NETLIFY_WORKFLOW.md](DASHBOARD_AND_NETLIFY_WORKFLOW.md)
 
 ---
 
@@ -17,7 +18,7 @@ Turn the research and architecture decision in the linked report into a working,
 
 Membrane AI remains the primary product and repository. AgentTwin is the Agent Assurance capability and reference implementation for agent tracing, stateful digital twins, fault injection, deterministic replay, and baseline/candidate evaluation.
 
-This is not a request to copy two repositories into one monolith, nor to build a decorative dashboard that merely links to two products. Build a thin, secure, evidence-driven integration that demonstrates:
+This is not a request to copy two repositories into one monolith, nor to build a decorative dashboard that merely links to two products. Build a thin, secure, evidence-driven integration and a real Membrane AI dashboard that demonstrates:
 
 ```text
 code / agent change
@@ -49,7 +50,8 @@ A reviewer can run one documented demo workflow from the Membrane AI repository 
 4. A combined evidence record linking the code change to agent behavior.
 5. A decision whose reasoning is explicit and whose critical failures cannot be hidden by an average score.
 6. Markdown/JSON reports attachable to a release or pull request.
-7. Exact commands, evidence, limitations, and next steps in `PROGRESS.md`.
+7. Exact commands, evidence, limitations, and next steps in `PROGRESS.md`.  
+8. A responsive Membrane AI dashboard with a deterministic, clearly labelled synthetic demo mode and a separately verified Netlify deployment package.
 
 Do not claim success until each item is backed by a reproducible test or working end-to-end demo.
 
@@ -182,7 +184,7 @@ Keep AgentTwin's accurate technical vocabulary: trace, scenario, twin, fault inj
 └───────────────────────────────────────────────────────────────┘
 ```
 
-The first UI integration may be a Membrane CLI/report plus a deep link to the AgentTwin evaluation UI. Do not build a full new web product unless the current repository and minimal demo prove it necessary. The first milestone is one vertical slice, not a multi-quarter UI rewrite.
+The dashboard is now an explicit deliverable. Follow `DASHBOARD_AND_NETLIFY_WORKFLOW.md` for UI scope, source labelling, frontend security, demo mode, Netlify configuration and acceptance gates. Do not confuse the existing marketing landing page or Grafana operational dashboard with the product dashboard. A static synthetic demo deploy and a connected product deploy are separate readiness levels.
 
 ### 3.3 Ownership and data boundaries
 
@@ -321,6 +323,8 @@ Use the existing refund demo. It may initially be invoked manually from a Membra
 **Exit:** shadow result is consistent, idempotent and explainable; enforcement remains opt-in.
 
 ### Phase 5 — Demo hardening and handoff
+
+Complete the integration demo runbook and handoff evidence. Dashboard delivery is governed by the separate D0–D5 workstream in `DASHBOARD_AND_NETLIFY_WORKFLOW.md`.
 
 - Build runbook, seeded demo data, clean reset path and fault-injection walkthrough.
 - Add screenshots/logs only from real execution.
