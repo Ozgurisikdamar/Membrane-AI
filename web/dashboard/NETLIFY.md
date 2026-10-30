@@ -21,13 +21,35 @@ The Netlify frontend's server-side BFF calls a reachable Membrane/AgentTwin
 backend. Requires, set in **Netlify UI → Site settings → Environment variables**
 as **non-public, server-side only** (never `NEXT_PUBLIC_*`, never in `netlify.toml`):
 
+**Membrane evidence read API** — real persisted release decisions (Release Assurance):
+
+| Variable | Public? | Purpose |
+|---|---|---|
+| `MEMBRANE_EVIDENCE_URL` | server-only | https base of the evidence API (e.g. `https://<app>.fly.dev`) |
+| `MEMBRANE_EVIDENCE_API_KEY` | **secret, server-only** | evidence API key (sent as `X-Membrane-Api-Key`) |
+| `MEMBRANE_EVIDENCE_ALLOWED_HOSTS` | server-only | bare hostname(s) allowlist, e.g. `<app>.fly.dev` |
+| `MEMBRANE_EVIDENCE_ALLOW_LOOPBACK` | server-only | `1` only for local/dev loopback |
+
+**AgentTwin control-plane** — live Agent Assurance (eval/trace/simulation):
+
 | Variable | Public? | Purpose |
 |---|---|---|
 | `AGENTTWIN_BASE_URL` | server-only | https, allowlisted AgentTwin base |
 | `AGENTTWIN_API_KEY` | **secret, server-only** | AgentTwin API key (header-injected by the BFF) |
-| `AGENTTWIN_ALLOWED_HOSTS` | server-only | comma-separated host allowlist (SSRF guard) |
+| `AGENTTWIN_ALLOWED_HOSTS` | server-only | bare hostname(s) allowlist (SSRF guard) |
 | `AGENTTWIN_ALLOW_LOOPBACK` | server-only | `1` only for local/dev loopback |
+| `AGENTTWIN_ORG` | server-only | optional org id → `X-AgentTwin-Org` |
 | `AGENTTWIN_UI_URL` | server-only | base for trace deep links |
+
+Each backend is independent: set the `MEMBRANE_EVIDENCE_*` group to light up
+Release Assurance from real persisted evidence, the `AGENTTWIN_*` group for live
+eval/trace/simulation — either, both, or neither (demo-only). **Allowlist rule**
+(`src/lib/server/allowlist.ts`): a non-loopback destination **must be https** and
+its **bare hostname** must appear in the matching `*_ALLOWED_HOSTS` (no scheme, no
+path, no wildcards; `host:port` only when the URL carries a non-default port).
+
+The end-to-end deploy runbook (evidence API on Fly.io + this dashboard on
+Netlify) is **[DEPLOYMENT.md](../../docs/agenttwin-integration/DEPLOYMENT.md)**.
 
 Mode B is **not** deploy-ready until auth, tenant isolation, CORS/TLS, backend
 availability, secret handling and end-to-end tests are separately verified. A

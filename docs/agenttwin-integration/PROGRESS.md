@@ -1,6 +1,6 @@
 # AgentTwin Integration — Living Progress Report
 
-**Status:** `IN_PROGRESS` — AgentTwin integration **Phase 0–5 DONE** + dashboard **D0–D5 DONE** + **Membrane evidence read API + live Release Assurance DONE** (all on `main`, verified live end-to-end). Remaining items are owner/later steps (Netlify deploy, orchestrator auto-trigger, DB-backed store) — see §6/§11/§12.  
+**Status:** `IN_PROGRESS` — AgentTwin integration **Phase 0–5 DONE** + dashboard **D0–D5 DONE** + **Membrane evidence read API + live Release Assurance DONE** + **end-to-end deploy guide & assets DONE** (all on `main`, verified locally). Remaining items are owner/later steps (run the Fly+Netlify deploy, orchestrator auto-trigger, DB-backed store) — see §6/§9/§11.  
 **Last updated:** 2026-10-30  
 **Primary repository:** `Ozgurisikdamar/Membrane-AI`  
 **Reference repository:** `Ozgurisikdamar/AgentTwin` (read-only by default)  
@@ -131,6 +131,20 @@ Phase 0 verification runs (Linux cloud container; Go via full go1.25.0 SDK + `GO
 `None confirmed yet.` Do not modify AgentTwin as a workaround. Add a request only after identifying an actual upstream gap and recording source path, required change, compatibility concern and Membrane-side fallback.
 
 ## 9. Milestone log
+
+### 2026-10-30 — End-to-end deploy guide + assets (Netlify + Fly.io) (DONE, verified locally)
+
+- Status: `DONE`. Makes the live Release Assurance path **deployable** (owner decisions: guide + assets; evidence-api host = Fly.io). Gives evidence-api its first deploy assets (it had none) and completes the dashboard deploy docs (the four `MEMBRANE_EVIDENCE_*` vars were undocumented).
+- Membrane branch + HEAD SHA: `main` (push SHA below). AgentTwin reference SHA: `1e8fd0e` (read-only).
+- Files added: `deploy/fly/evidence-api/fly.toml` (volume `/data`, `/healthz` check, key via `fly secrets`), `docs/agenttwin-integration/DEPLOYMENT.md` (the end-to-end runbook). Files changed: `deploy/docker/Dockerfile.go` (backward-compatible `ARG CMD_PATH=cmd/*` so `pkg`'s two cmds can be disambiguated — existing 6 services unchanged), `Taskfile.yml` (`build:/image:/run:evidence-api` + evidence-api line in `build:images`), `deploy/compose/docker-compose.full.yml` (evidence-api service, `pkg/evstore` bind-mount), `netlify.toml` + `web/dashboard/NETLIFY.md` (Mode B now documents `MEMBRANE_EVIDENCE_*` + `AGENTTWIN_ORG` + the https/bare-hostname allowlist rule).
+- Exact commands + results (run here): `task build:evidence-api` → `bin/evidence-api` (static); binary smoke test serves `/healthz`=ok, 401 without key, lists both records; `docker compose -f docker-compose.full.yml config` valid; `fly.toml` valid TOML; `task --list` shows the new tasks; `go vet ./cmd/evidence-api` clean. Docker image: the full `Dockerfile.go --build-arg SERVICE=pkg --build-arg CMD_PATH=cmd/evidence-api` build correctly reaches the in-container `go mod download` (proving the `SERVICE`/`CMD_PATH` wiring) but fails there on the **known build-env proxy-CA TLS limitation** (affects all in-container Go builds equally, not this change); the deployable **runtime artifact** was verified by running the exact distroless base + the compiled static binary in a container — serves `/healthz`, 401, and (with records at 0644) lists + returns `rel-aedc1ed4` gate=BLOCK/code=BLOCK, as **uid 65532 nonroot**.
+- Validated operational detail (now in the guide): records written by `release-evidence` are mode `0600`; the nonroot container (uid 65532) cannot read them → `chmod 644` before upload/serving (confirmed: 0600 fails, 0644 serves).
+- Security/privacy: API key only via `fly secrets` / Netlify server-side env (never in `fly.toml`/`netlify.toml`/bundle); non-loopback destinations must be https + bare-hostname-allowlisted; guide includes the no-secret-in-bundle + 401 + backend-down honesty checks.
+- Known limitations / blockers: the actual `fly deploy` + Netlify site creation are **owner steps** (no Fly/Netlify credentials in this env) — every command in the guide is otherwise validated locally; single-node FileStore (DB-backed multi-tenant store later); Helm chart still lacks evidence-api support (`/healthz` probe + volume) — out of scope.
+- Upstream AgentTwin requests: None.
+- Next actions (owner): run `DEPLOYMENT.md` Part A (Fly) + Part B (Netlify), then the Part C verification.
+- Commit SHA containing this report: recorded on push below.
+- Push status + remote branch: pushed to `origin/main` (SHA recorded on push).
 
 ### 2026-10-30 — Membrane evidence read API + dashboard live Release Assurance (DONE, verified live)
 

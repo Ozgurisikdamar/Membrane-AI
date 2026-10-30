@@ -98,6 +98,8 @@ tasks:
     cmds:
       - for: { var: GO_SERVICES }
         cmd: docker build -f deploy/docker/Dockerfile.go --build-arg SERVICE=services/{{.ITEM}} -t membrane/{{.ITEM}}:dev .
+      # pkg holds >1 cmd, so it is built by name rather than the services/* loop.
+      - docker build -f deploy/docker/Dockerfile.go --build-arg SERVICE=pkg --build-arg CMD_PATH=cmd/evidence-api -t membrane/evidence-api:dev .
       - docker build -f deploy/docker/Dockerfile.semantic -t membrane/semantic:dev .
 
   publish:images:
@@ -311,3 +313,28 @@ tasks:
       - task: build:cli
       - ./bin/membrane scan docs --json --fail-on=never > /tmp/membrane-scan.json || true
       - cd pkg && go run ./cmd/release-evidence --scan-json /tmp/membrane-scan.json --repo Ozgurisikdamar/Membrane-AI --commit demo000000 --fake
+
+  # --- Membrane evidence read API (pkg/cmd/evidence-api) ----------------------
+  build:evidence-api:
+    desc: Build the static evidence-api binary into bin/ (CGO off, current platform)
+    dir: pkg
+    cmds:
+      # GOWORK inline — the machine-level GOWORK override outranks task env blocks.
+      - GOWORK=off CGO_ENABLED=0 go build -trimpath -ldflags "-s -w" -o ../bin/evidence-api{{exeExt}} ./cmd/evidence-api
+
+  image:evidence-api:
+    desc: Build the evidence-api container image (distroless; pkg has >1 cmd, so CMD_PATH is set)
+    cmds:
+      - docker build -f deploy/docker/Dockerfile.go --build-arg SERVICE=pkg --build-arg CMD_PATH=cmd/evidence-api -t membrane/evidence-api:dev .
+
+  run:evidence-api:
+    desc: "Run the evidence read API locally over ./evstore (dev key; auth required)"
+    env:
+      GOWORK: "off"
+      CGO_ENABLED: "0"
+      MEMBRANE_EVIDENCE_STORE_DIR: '{{.STORE | default "evstore"}}'
+      MEMBRANE_EVIDENCE_API_KEY: '{{.KEY | default "dev-evidence-key"}}'
+      MEMBRANE_EVIDENCE_PORT: '{{.PORT | default "8007"}}'
+    cmds:
+      # Populate ./evstore first with `task release-evidence` variants that pass --store.
+      - cd pkg && go run ./cmd/evidence-api

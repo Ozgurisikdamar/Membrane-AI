@@ -16,13 +16,16 @@ evidence-api over the Phase-5 store → dashboard (`next start`) in live mode re
 detail `rel-aedc1ed4` → Combined gate BLOCK + code verdict "BLOCK (5 blocking)" + 9 real scenarios; 0 console errors; **no API key in the
 client bundle**; mobile no overflow. Gates: Go `build/test/lint` green (`pkg/assurance` 89.3% cov; evidence-api handlers tested); dashboard
 41 Vitest + ESLint + `tsc` + `next build` green.
-**Next up (owner/later):** deploy `evidence-api` beside the Netlify dashboard (real key + TLS + allowlisted host) so the live dashboard
-shows real evidence in production; Netlify Mode A deploy (`web/dashboard/NETLIFY.md`); later — DB-backed per-tenant `EvidenceStore`,
-orchestrator Saga auto-producing evidence on release. To run locally: `MEMBRANE_EVIDENCE_STORE_DIR=<dir> MEMBRANE_EVIDENCE_API_KEY=<k>
-go run ./pkg/cmd/evidence-api` then dashboard with `MEMBRANE_EVIDENCE_URL=http://127.0.0.1:8007 MEMBRANE_EVIDENCE_API_KEY=<k>
-MEMBRANE_EVIDENCE_ALLOW_LOOPBACK=1`. Toolchain: full go1.25 SDK (GOWORK=off to build `pkg` standalone — the go.work pins `go 1.25`
-while modules need `>=1.25.0`); Node 22 for the dashboard. Core Membrane roadmap unchanged. Full detail + commit SHAs in
-`docs/agenttwin-integration/PROGRESS.md` §1/§9._
+**Next up (owner):** run the end-to-end deploy — **`docs/agenttwin-integration/DEPLOYMENT.md`**: Part A deploys `evidence-api` on
+**Fly.io** (`deploy/fly/evidence-api/fly.toml`; volume `/data`, key via `fly secrets`, **`chmod 644` the records** — the nonroot uid
+65532 can't read release-evidence's 0600 files), Part B deploys the dashboard on **Netlify** (Mode A→B; set `MEMBRANE_EVIDENCE_URL`/
+`_API_KEY`/`_ALLOWED_HOSTS` — https + bare hostname), Part C flips **Live** and verifies real 1.3.0 BLOCK / 1.3.1 PASS. New deploy
+assets this session: `Dockerfile.go` `CMD_PATH` arg (disambiguates `pkg`'s two cmds), Taskfile `build:/image:/run:evidence-api`,
+compose `evidence-api` service. Later: DB-backed per-tenant `EvidenceStore`; orchestrator Saga auto-producing evidence on release.
+Local run: `task run:evidence-api` (serves `./pkg/evstore`), dashboard with `MEMBRANE_EVIDENCE_URL=http://127.0.0.1:8007
+MEMBRANE_EVIDENCE_API_KEY=<k> MEMBRANE_EVIDENCE_ALLOW_LOOPBACK=1`. Toolchain: full go1.25 SDK (GOWORK=off to build `pkg` standalone —
+the go.work pins `go 1.25` while modules need `>=1.25.0`); Node 22 for the dashboard; in-container Go builds still need the proxy CA
+(known). Core Membrane roadmap unchanged. Full detail + commit SHAs in `docs/agenttwin-integration/PROGRESS.md` §1/§9._
 
 _Previous: 2026-10-30 — session: **AgentTwin integration Phase 0–5 DONE + dashboard D0–D5 DONE** (all on `main`).
 The full code→agent→release→SCM evidence chain works end-to-end, verified live: `membrane scan` → Go `release-evidence`

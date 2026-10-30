@@ -1,6 +1,12 @@
 # syntax=docker/dockerfile:1
 # Parameterized multi-stage build for every Go service (D-010/D-029):
 #   docker build -f deploy/docker/Dockerfile.go --build-arg SERVICE=services/ingestion -t membrane/ingestion:dev .
+# A module with a single cmd uses the default CMD_PATH=cmd/* . A module with
+# several cmd dirs (e.g. SERVICE=pkg has both release-evidence and evidence-api)
+# must name the one to build:
+#   docker build -f deploy/docker/Dockerfile.go \
+#     --build-arg SERVICE=pkg --build-arg CMD_PATH=cmd/evidence-api \
+#     -t membrane/evidence-api:dev .
 # Build context = repo root (the module `replace` directives need ../../pkg and ../../proto).
 # Output: a static binary on distroless/static — no shell, no libc coupling, runs as nonroot.
 
@@ -8,6 +14,9 @@ ARG GO_VERSION=1.25
 
 FROM golang:${GO_VERSION} AS build
 ARG SERVICE
+# Which cmd to build within the module. Default keeps every existing service
+# building its single ./cmd/* ; override to disambiguate a multi-cmd module.
+ARG CMD_PATH=cmd/*
 WORKDIR /src
 
 # Warm the module cache first so code edits don't re-download dependencies;
@@ -22,7 +31,7 @@ COPY . .
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
     cd ${SERVICE} \
- && GOWORK=off CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/app ./cmd/*
+ && GOWORK=off CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/app ./${CMD_PATH}
 
 FROM gcr.io/distroless/static-debian12:nonroot
 COPY --from=build /out/app /app

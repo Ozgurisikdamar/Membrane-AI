@@ -1,0 +1,63 @@
+# Fly.io deployment for the Membrane evidence read API (pkg/cmd/evidence-api).
+#
+# This serves the persisted combined release-evidence records over an
+# authenticated, read-only HTTP API so the Netlify dashboard's Release Assurance
+# can show REAL combined decisions in production. See
+# docs/agenttwin-integration/DEPLOYMENT.md for the full end-to-end runbook.
+#
+# Deploy from the REPO ROOT so the Docker build context is the repo root (the
+# shared Dockerfile.go copies pkg/ + proto/ from there):
+#
+#   fly deploy --config deploy/fly/evidence-api/fly.toml .
+#
+# The API key is NEVER stored in this file — set it as a Fly secret:
+#   fly secrets set MEMBRANE_EVIDENCE_API_KEY=<a-long-random-key> --config deploy/fly/evidence-api/fly.toml
+#
+# Rename `app` to your own globally-unique Fly app name before `fly launch`/deploy.
+
+app = "membrane-evidence-api"
+primary_region = "iad"   # change to the region nearest your Netlify edge/users
+
+[build]
+  dockerfile = "deploy/docker/Dockerfile.go"
+
+  [build.args]
+    # pkg has more than one cmd (release-evidence + evidence-api); name the one
+    # to build. SERVICE is the module dir, CMD_PATH the cmd within it.
+    SERVICE = "pkg"
+    CMD_PATH = "cmd/evidence-api"
+
+[env]
+  # The store directory lives on the mounted volume (see [[mounts]]), so records
+  # survive restarts/redeploys. evidence-api only READS this dir; records are
+  # written by the `release-evidence` command (see DEPLOYMENT.md Part D).
+  MEMBRANE_EVIDENCE_STORE_DIR = "/data"
+  MEMBRANE_EVIDENCE_PORT = "8007"
+  # MEMBRANE_EVIDENCE_API_KEY is set via `fly secrets set`, never here.
+
+# Persistent volume for the FileStore (one JSON file per release id).
+# Create it once before the first deploy:
+#   fly volumes create evidence_data --size 1 --region iad --config deploy/fly/evidence-api/fly.toml
+[[mounts]]
+  source = "evidence_data"
+  destination = "/data"
+
+[http_service]
+  internal_port = 8007
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  # Keep one machine running so the volume host stays warm and reads are instant.
+  min_machines_running = 1
+
+  # Unauthenticated liveness endpoint (the /v1/* routes require the API key).
+  [[http_service.checks]]
+    method = "GET"
+    path = "/healthz"
+    interval = "15s"
+    timeout = "2s"
+    grace_period = "5s"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"

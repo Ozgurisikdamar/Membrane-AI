@@ -207,5 +207,22 @@ services:
     ports:
       - "8105:8105"   # health
 
+  # Read-only evidence API over the persisted combined release-evidence records.
+  # It only READS; populate the store first on the host, e.g.
+  #   cd pkg && GOWORK=off go run ./cmd/release-evidence ... --store ./evstore
+  # then this serves pkg/evstore (bind-mounted read-only). Auth: X-Membrane-Api-Key.
+  # NOTE: the image runs as nonroot (uid 65532) but release-evidence writes records
+  # mode 0600, so make them readable for the container: `chmod 644 pkg/evstore/*.json`.
+  evidence-api:
+    image: membrane/evidence-api:dev
+    environment:
+      MEMBRANE_EVIDENCE_STORE_DIR: /data
+      MEMBRANE_EVIDENCE_API_KEY: ${MEMBRANE_EVIDENCE_API_KEY:-dev-evidence-key}
+      MEMBRANE_EVIDENCE_PORT: "8007"
+    volumes:
+      - ../../pkg/evstore:/data:ro
+    ports:
+      - "8007:8007"   # HTTP (read-only evidence API)
+
 volumes:
   pgdata-full:

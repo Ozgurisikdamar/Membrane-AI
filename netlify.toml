@@ -16,11 +16,24 @@
 [build.environment]
   NODE_VERSION = "22"
   # Demo mode needs no backend env. For Mode B, set these in the Netlify UI
-  # (Site settings → Environment variables) as NON-public, server-side only:
+  # (Site settings → Environment variables) as NON-public, server-side only.
+  # Full end-to-end runbook: docs/agenttwin-integration/DEPLOYMENT.md.
+  #
+  # Membrane evidence read API (real persisted release decisions):
+  #   MEMBRANE_EVIDENCE_URL          (https, e.g. https://<app>.fly.dev)
+  #   MEMBRANE_EVIDENCE_API_KEY      (secret — never a NEXT_PUBLIC_* var)
+  #   MEMBRANE_EVIDENCE_ALLOWED_HOSTS (bare hostname(s), e.g. <app>.fly.dev)
+  #
+  # AgentTwin control-plane (live Agent Assurance eval/trace/sim):
   #   AGENTTWIN_BASE_URL      (https, allowlisted)
   #   AGENTTWIN_API_KEY       (secret — never a NEXT_PUBLIC_* var)
-  #   AGENTTWIN_ALLOWED_HOSTS (comma-separated host allowlist)
+  #   AGENTTWIN_ALLOWED_HOSTS (bare hostname(s))
+  #   AGENTTWIN_ORG           (optional org id → X-AgentTwin-Org)
   #   AGENTTWIN_UI_URL        (for trace deep links)
+  #
+  # Allowlist rule (src/lib/server/allowlist.ts): a non-loopback destination MUST
+  # be https and its bare hostname MUST be listed in the matching *_ALLOWED_HOSTS.
+  # *_ALLOW_LOOPBACK=1 is for local dev only — never set it in production.
   # Never place a secret in a NEXT_PUBLIC_* variable or in this file.
 
 # HTML is always revalidated; hashed static assets are immutable.
