@@ -32,6 +32,26 @@ test("release evidence drill-down shows the BLOCK decision and its rule", async 
   await expect(page.getByText("refund-tool-success-lie")).toBeVisible();
 });
 
+test("code governance shows the real scan (grade F, masked secrets)", async ({ page }) => {
+  await page.goto("/code-governance");
+  await expect(page.getByText("Health grade")).toBeVisible();
+  await expect(page.getByText("F", { exact: true })).toBeVisible();
+  // Secrets are masked, never shown raw.
+  await expect(page.getByText(/\[MASKED:/).first()).toBeVisible();
+  await expect(page.getByText("aws-access-key-id").first()).toBeVisible();
+});
+
+test("security center lists a denied policy decision", async ({ page }) => {
+  await page.goto("/security");
+  await expect(page.getByText("shell.exec")).toBeVisible();
+  await expect(page.getByText("deny").first()).toBeVisible();
+});
+
+test("reports offer a downloadable evidence export", async ({ page }) => {
+  await page.goto("/reports");
+  await expect(page.getByRole("button", { name: "Download JSON" }).first()).toBeVisible();
+});
+
 test("switching to Live mode (no backend) shows an honest not-connected state", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("button", { name: "Live" }).click();

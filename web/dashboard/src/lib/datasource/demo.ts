@@ -9,6 +9,8 @@ import type {
   TraceRef,
   ReleaseView,
   ScenarioOutcome,
+  CodeGovernanceReport,
+  PolicyDecision,
 } from "./types";
 import { demo } from "./types";
 import {
@@ -19,6 +21,8 @@ import {
   demoAgents,
   demoSimulations,
   demoTraces,
+  demoCodeReport,
+  demoPolicyDecisions,
   FIXTURE_VERSION,
 } from "./fixtures";
 import { decideGate, mapEvalStatus } from "../gate";
@@ -97,5 +101,13 @@ export class DemoDataSource implements DataSource {
       },
     };
     return demo<ReleaseView | null>(view, NOTE);
+  }
+
+  async codeGovernance(): Promise<Sourced<CodeGovernanceReport | null>> {
+    return demo<CodeGovernanceReport | null>(demoCodeReport, NOTE);
+  }
+
+  async policyDecisions(): Promise<Sourced<PolicyDecision[]>> {
+    return demo<PolicyDecision[]>(demoPolicyDecisions, NOTE);
   }
 }

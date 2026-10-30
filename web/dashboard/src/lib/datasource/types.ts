@@ -123,6 +123,44 @@ export interface ReleaseView {
   };
 }
 
+export interface CodeFinding {
+  file: string;
+  line: number;
+  rule: string;
+  severity: "blocking" | "warning" | "info";
+  message: string;
+  /** Source line AFTER secret masking (secrets appear only as [MASKED:<rule>]). */
+  excerpt: string;
+}
+
+export interface CodeRuleStat {
+  rule: string;
+  severity: string;
+  count: number;
+}
+
+export interface CodeGovernanceReport {
+  root: string;
+  filesScanned: number;
+  filesSkipped: number;
+  total: number;
+  blocking: number;
+  warnings: number;
+  infos: number;
+  affectedFiles: number;
+  grade: string;
+  debtScore: number;
+  byRule: CodeRuleStat[];
+  findings: CodeFinding[];
+}
+
+export interface PolicyDecision {
+  kind: "tool-call" | "package" | "shadow-ai";
+  subject: string;
+  decision: "allow" | "deny" | "review";
+  reasons: string[];
+}
+
 /**
  * The single data boundary every screen uses. Implementations: DemoDataSource
  * (local deterministic fixtures) and LiveDataSource (BFF → backend). A method
@@ -138,4 +176,6 @@ export interface DataSource {
   simulations(): Promise<Sourced<SimulationSummary[]>>;
   traces(): Promise<Sourced<TraceRef[]>>;
   release(id: string): Promise<Sourced<ReleaseView | null>>;
+  codeGovernance(): Promise<Sourced<CodeGovernanceReport | null>>;
+  policyDecisions(): Promise<Sourced<PolicyDecision[]>>;
 }

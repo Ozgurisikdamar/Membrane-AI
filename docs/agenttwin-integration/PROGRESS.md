@@ -95,7 +95,7 @@ Integration endpoints are now verified against AgentTwin's live OpenAPI + runnin
 |---|---|---|
 | 0 — Baseline revalidation | `DONE` (2026-10-30) | SHAs confirmed; API/contract inventory; Membrane gates green; refund demo reproduced live (1.3.0 regression + 1.3.1 fixed) |
 | 1 — Contract/security design | `DONE` (2026-10-30) | ADR-0001 + D-037; versioned `pkg/assurance` mapping/evidence/correlation contracts + JSON Schemas; THREAT_MODEL (T1–T12); contract/compat tests green (93.7% cov) |
-| 2 — Small vertical slice | `NOT_STARTED` | Membrane typed client + actual evaluation + evidence snapshot |
+| 2 — Small vertical slice | `IN_PROGRESS` (2026-10-30) | Evidence builder (`BuildReleaseEvidence`) + `AgentTwinClient` port + deterministic fake landed & tested; live AgentTwin already read via the dashboard BFF. **Remaining:** Go HTTP adapter + orchestrator wiring + a one-command CLI combined report. |
 | 3 — Evidence + release gate | `NOT_STARTED` | deterministic gate + Markdown/JSON + critical-rule tests |
 | 4 — SCM shadow mode | `NOT_STARTED` | idempotent reporter integration + shadow-mode tests |
 | 5 — Demo hardening/handoff | `NOT_STARTED` | repeatable runbook + exact test evidence |
@@ -212,7 +212,7 @@ The owner requested a real Membrane AI product dashboard and a Netlify-ready dem
 | D0 — Baseline/UI/API/deployment inventory | `DONE` (2026-10-30) | Frontend/API/auth/deploy audited (§11.1); framework = Next.js; live/demo/unavailable data contract (§11.2) |
 | D1 — Dashboard foundation | `DONE` (2026-10-30) | Next.js app shell + 9-section nav, Membrane tokens, demo/live DataSource + states; 12 Vitest tests pass; production build OK (12 routes) |
 | D2 — Agent Assurance dashboard | `DONE` (2026-10-30) | BFF (server-side cred + SSRF allowlist) + live AgentTwin wiring verified; overview/agents/simulations/traces/release views; 27 unit + 4 E2E pass; build green |
-| D3 — Code Governance integration | `NOT_STARTED` | Combined code + agent evidence, backend authorization and tenant-isolation tests |
+| D3 — Code Governance integration | `DONE` (2026-10-30) | Code Governance (real scan, grade F, masked), Security Center, Reports export; unified release correlation; AgentTwin Phase 2 Go evidence builder + client port + fake; 33 unit + 7 E2E green |
 | D4 — Netlify demo readiness | `NOT_STARTED` | Verified build/publish paths, config, headers, environment inventory, successful preview |
 | D5 — Final dashboard acceptance | `NOT_STARTED` | Reproducible runbook, real screenshots, responsive/accessibility/E2E evidence, owner handoff |
 
@@ -263,6 +263,19 @@ seeds shown) and are never presented as live.
 - Connected mode requires verified backend authentication, tenant/project authorization, HTTPS, CORS, secret handling and end-to-end tests.
 - A successful static Netlify deploy must never be reported as connected production readiness.
 - No deployment has been attempted as part of this planning update.
+
+### 2026-10-30 — D3 Code Governance + unified view + AgentTwin Phase 2 slice (DONE)
+
+- Status: Dashboard **D3 = DONE**; D4 next. AgentTwin integration **Phase 2 = IN_PROGRESS** (evidence builder + client port + fake landed; HTTP adapter + Saga wiring remain). Pushed to `main`.
+- Files/screens delivered (dashboard): Code Governance view (`src/app/code-governance/page.tsx`) from the **real** `membrane scan` output; Security Center (`src/app/security/page.tsx`) gateway decisions; Reports (`src/app/reports/page.tsx`) with JSON/Markdown evidence export; `codeGovernance()`/`policyDecisions()` on the DataSource (demo real-scan fixture; live = honest unavailable, no Membrane read API).
+- Files delivered (Go Phase 2, `pkg/assurance`): `builder.go` (`BuildReleaseEvidence` — deterministic combined-gate aggregator reusing MapEvalStatus/Decide; fail-safe, cites rules), `client.go` (`AgentTwinClient` port + deterministic `FakeClient`), `builder_test.go`.
+- Data source per screen: Code Governance = **real scan** (grade F, 5 blocking, secrets masked `[MASKED:…]`) as demo fixture, live unavailable; Security = demo decisions, live unavailable; Reports = export of the (demo/live) release evidence. Overview code-findings aligned to the real scan (5 blocking).
+- Real command evidence: `membrane scan --report md` → grade **F**, debt score **833.3**, byRule generic-assigned-secret×3/aws-access-key-id×1/github-token×1; captured verbatim into the fixture.
+- Implementation vs design-only: dashboard views + `pkg/assurance` builder/port/fake are **implemented and tested**. The AgentTwin **HTTP adapter** (live Go client) + orchestrator Saga wiring + reporter shadow publish remain **design/next** (Phase 2/4). The dashboard already reads live AgentTwin via its own BFF (D2).
+- Tests: dashboard **33 Vitest + 7 Playwright E2E** pass (added code-governance masked-secret, security deny, reports export, live-honesty/`unavailable` tests); `pkg/assurance` **90% coverage**, `task test`/`task lint` green across all modules; `npm run build` green.
+- Security/privacy: code findings shown only as `[MASKED:…]` (no raw secret in UI — asserted in tests); live code/policy history returns `unavailable` not fabricated; BFF tenant from authenticated principal; builder enforces fail-safe invariants (critical/ERROR/INCOMPLETE never PASS; BLOCK/WARN cite a rule).
+- Known limitations: Membrane still has no read API for code/verdict history (D0 gap) → that history is demo/fixture; live combined evidence code-verdict is a placeholder until the Go HTTP adapter + Membrane code submission are wired (Phase 2 remainder / Phase 3 persist). Netlify not yet configured (D4).
+- Next action: D4 — Netlify demo deployment readiness (netlify.toml, @netlify/plugin-nextjs, env classification, headers, preview deploy, Mode A evidenced).
 
 ### 2026-10-30 — D2 functional Agent Assurance dashboard (DONE)
 

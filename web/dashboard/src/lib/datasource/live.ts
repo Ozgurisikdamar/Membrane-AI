@@ -9,6 +9,8 @@ import type {
   TraceRef,
   ReleaseView,
   GateDecision,
+  CodeGovernanceReport,
+  PolicyDecision,
 } from "./types";
 import { live, unavailable } from "./types";
 
@@ -64,6 +66,14 @@ export class LiveDataSource implements DataSource {
   }
   release(id: string) {
     return this.load<ReleaseView | null>(`/api/bff/release/${encodeURIComponent(id)}`, null);
+  }
+  async codeGovernance() {
+    // Membrane exposes no read API for scan history today (D0). Live code
+    // governance history is therefore unavailable; the honest state is shown.
+    return unavailable<CodeGovernanceReport | null>(null, "Membrane has no read API for scan history (D0 gap)");
+  }
+  async policyDecisions() {
+    return unavailable<PolicyDecision[]>([], "Membrane gateway exposes decisions, not a queryable history (D0 gap)");
   }
 }
 

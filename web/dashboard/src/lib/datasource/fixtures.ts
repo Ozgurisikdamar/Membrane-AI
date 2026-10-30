@@ -48,7 +48,7 @@ export const demoEvalRuns: EvalRunSummary[] = [
 
 export const demoOverview: OverviewStats = {
   // Code findings mirror the Phase-0 synthetic scan sample (3 blocking secrets).
-  codeFindings: { blocking: 3, warning: 0, info: 0 },
+  codeFindings: { blocking: 5, warning: 0, info: 0 },
   evalTotals: { total: 2, completed: 2, blocked: 1, passed: 1 },
   releaseMix: { PASS: 1, WARN: 0, BLOCK: 1, INCOMPLETE: 0, ERROR: 0 },
   lastScanAt: "2026-10-30T10:36:00Z",
@@ -105,4 +105,43 @@ export const demoSimulations: SimulationSummary[] = [
 
 export const demoTraces: TraceRef[] = [
   { traceId: "17d04bc66154a8fc7b96d867c8bb7288", agentVersion: "1.2.4", outcome: "refund_confirmed", verified: true, deepLink: "http://localhost:3000/traces/17d04bc66154a8fc7b96d867c8bb7288" },
+];
+
+// Code Governance report — the REAL output of `membrane scan --report md/--json`
+// over a synthetic sample (3 files, 5 blocking secret findings → grade F,
+// debt score 833.3). Secrets appear only as [MASKED:<rule>] (pkg/scan masking).
+import type { CodeGovernanceReport, PolicyDecision } from "./types";
+
+export const demoCodeReport: CodeGovernanceReport = {
+  root: "Ozgurisikdamar/demo-co-support-agent",
+  filesScanned: 3,
+  filesSkipped: 0,
+  total: 5,
+  blocking: 5,
+  warnings: 0,
+  infos: 0,
+  affectedFiles: 3,
+  grade: "F",
+  debtScore: 833.3,
+  byRule: [
+    { rule: "generic-assigned-secret", severity: "blocking", count: 3 },
+    { rule: "aws-access-key-id", severity: "blocking", count: 1 },
+    { rule: "github-token", severity: "blocking", count: 1 },
+  ],
+  findings: [
+    { file: "api/auth.py", line: 1, rule: "generic-assigned-secret", severity: "blocking", message: "potential credential detected (generic-assigned-secret); remove and rotate it", excerpt: "[MASKED:generic-assigned-secret]" },
+    { file: "api/auth.py", line: 2, rule: "github-token", severity: "blocking", message: "potential credential detected (github-token); remove and rotate it", excerpt: "[MASKED:generic-assigned-secret]" },
+    { file: "api/auth.py", line: 2, rule: "generic-assigned-secret", severity: "blocking", message: "potential credential detected (generic-assigned-secret); remove and rotate it", excerpt: "[MASKED:generic-assigned-secret]" },
+    { file: "api/payments.py", line: 3, rule: "aws-access-key-id", severity: "blocking", message: "potential credential detected (aws-access-key-id); remove and rotate it", excerpt: "AWS_SECRET_ACCESS_KEY = \"[MASKED:aws-access-key-id]\"" },
+    { file: "infra/deploy.sh", line: 2, rule: "generic-assigned-secret", severity: "blocking", message: "potential credential detected (generic-assigned-secret); remove and rotate it", excerpt: "[MASKED:generic-assigned-secret]" },
+  ],
+};
+
+// MCP/tool/package/shadow-AI policy decisions from the Membrane gateway engine
+// (services/gateway domain logic). Illustrative, deterministic.
+export const demoPolicyDecisions: PolicyDecision[] = [
+  { kind: "tool-call", subject: "shell.exec", decision: "deny", reasons: ["tool on deny-list", "dangerous argument pattern"] },
+  { kind: "package", subject: "npm:reqeusts", decision: "deny", reasons: ["typosquat of popular package 'requests' (edit distance 1)"] },
+  { kind: "package", subject: "pypi:requests", decision: "allow", reasons: ["sanctioned popular package"] },
+  { kind: "shadow-ai", subject: "unknown-agent@workstation-14", decision: "review", reasons: ["agent not in sanctioned registry"] },
 ];

@@ -52,4 +52,18 @@ describe("DemoDataSource", () => {
     const d = (await ds.evalRunDetail(id)).value;
     expect(d?.perScenario.some((s) => s.status === "NEW_CRITICAL_FAILURE")).toBe(true);
   });
+
+  it("exposes the real code-governance scan (grade F, 5 blocking, secrets masked)", async () => {
+    const r = (await ds.codeGovernance()).value;
+    expect(r?.grade).toBe("F");
+    expect(r?.blocking).toBe(5);
+    // Every excerpt is masked — no raw secret leaks into the UI.
+    expect(r?.findings.every((f) => !/AKIA[0-9A-Z]{16}/.test(f.excerpt))).toBe(true);
+    expect(r?.findings.some((f) => f.excerpt.includes("[MASKED:"))).toBe(true);
+  });
+
+  it("exposes gateway policy decisions including a deny", async () => {
+    const d = (await ds.policyDecisions()).value;
+    expect(d.some((x) => x.decision === "deny")).toBe(true);
+  });
 });
