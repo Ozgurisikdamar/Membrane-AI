@@ -14,7 +14,7 @@
 
 | Field | Value |
 |---|---|
-| Current phase | Dashboard **D0–D5 DONE** (see §11); AgentTwin integration **Phase 0–3 DONE** (client+HTTP adapter+aggregator+immutable store+deterministic regen+gate-rule tests; verified live) → **Phase 4 next** (shadow-mode SCM) |
+| Current phase | Dashboard **D0–D5 DONE** (§11); AgentTwin integration **Phase 0–4 DONE** (client+HTTP adapter+aggregator+immutable store+gate-rule tests+shadow-mode SCM publish; verified live) → **Phase 5 next** (demo hardening/handoff) |
 | Current status | `IN_PROGRESS` |
 | Membrane working branch | `main` (owner directed this workstream to develop on and push to `main`, superseding the work order §1.4 `feature/agenttwin-assurance` policy) |
 | Membrane HEAD (Phase 0 inspection, 2026-10-30) | `aedc1ed4014a684868ef3a339ea1d6d5df8235e0` (== `origin/main`; supersedes the 2026-09-26 `b8e8cfd…` baseline) |
@@ -38,8 +38,8 @@
 - [x] First integration ADR and contract fixtures. (2026-10-30 — ADR-0001, THREAT_MODEL, CONTRACTS, D-037; `pkg/assurance` + schemas + fixtures + compat tests.)
 - [x] AgentTwin client/adapter. (Phase 2 — 2026-10-30: port + HTTP adapter + fake + `BuildReleaseEvidence` + `release-evidence` command; verified live.)
 - [x] End-to-end evidence aggregation and release gate. (Phase 3 — immutable store + deterministic regeneration + gate-rule table tests; 2026-10-30.)
-- [ ] Shadow-mode reporter integration.
-- [ ] Reproducible demo and handoff.
+- [x] Shadow-mode reporter integration. (Phase 4 — shadow/enforce mapping + idempotent GitHub commit-status publisher; 2026-10-30.)
+- [ ] Reproducible demo and handoff. (Phase 5)
 
 ## 3. Verified initial repository observations
 
@@ -97,7 +97,7 @@ Integration endpoints are now verified against AgentTwin's live OpenAPI + runnin
 | 1 — Contract/security design | `DONE` (2026-10-30) | ADR-0001 + D-037; versioned `pkg/assurance` mapping/evidence/correlation contracts + JSON Schemas; THREAT_MODEL (T1–T12); contract/compat tests green (93.7% cov) |
 | 2 — Small vertical slice | `DONE` (2026-10-30) | Typed `AgentTwinClient` port + **HTTP adapter** (allowlist/timeout/size/typed-errors, fake-server tests) + deterministic fake + `BuildReleaseEvidence` + **one-command `release-evidence`** producing a combined code+agent evidence record (JSON/Markdown). **Verified live** against the AgentTwin stack (real eval → BLOCK). Orchestrator Saga auto-wiring + reporter shadow publish are Phase 3/4. |
 | 3 — Evidence + release gate | `DONE` (2026-10-30) | Immutable `EvidenceStore` (FileStore write-once + MemStore) + canonical `RenderJSON`/`RenderMarkdown`; deterministic regeneration (byte-identical, tested); exhaustive gate-rule table test (ERROR/INCOMPLETE/missing never PASS); `release-evidence --store/--regenerate`. |
-| 4 — SCM shadow mode | `NOT_STARTED` | idempotent reporter integration + shadow-mode tests |
+| 4 — SCM shadow mode | `DONE` (2026-10-30) | `MapSCMStatus` (shadow→enforce, D-035) + `Publisher` port + idempotent delivery log + `GitHubStatusPublisher` (fake-server tests: 201/401-revoked/403/404/5xx) + `release-evidence --publish-shadow`. Shadow BLOCK→neutral/non-blocking; enforcement opt-in. |
 | 5 — Demo hardening/handoff | `NOT_STARTED` | repeatable runbook + exact test evidence |
 | Later — blast radius/regression mining/runtime governance/unified UI | `PLANNED` | separate scope after MVP evidence |
 
@@ -263,6 +263,20 @@ seeds shown) and are never presented as live.
 - Connected mode requires verified backend authentication, tenant/project authorization, HTTPS, CORS, secret handling and end-to-end tests.
 - A successful static Netlify deploy must never be reported as connected production readiness.
 - No deployment has been attempted as part of this planning update.
+
+### 2026-10-30 — AgentTwin integration Phase 4 shadow-mode SCM publish (DONE)
+
+- Status: AgentTwin integration **Phase 4 = DONE**. Pushed to `main`. Phase 5 (demo hardening/handoff) next.
+- Files (`pkg/assurance`): `scm.go` (`MapSCMStatus` evidence→SCM status with D-035 shadow→enforce; `Publisher` port; `FakePublisher`; `IdempotentPublisher` with a delivery log), `scmgithub.go` (`GitHubStatusPublisher` — commit-status POST, reporter HTTP conventions, typed errors), `scm_test.go`. `pkg/cmd/release-evidence` wired with `--publish-shadow`/`--enforce`/`--github-token`/`--github-base-url`.
+- Implementation vs design-only: **implemented and tested**. `pkg/assurance` coverage 89.8%; `task build/test/lint` green (0 lint).
+- Exact commands + results (verified):
+  - **Shadow** (default, non-blocking): BLOCK → outcome=`neutral`, state=`pending`, title "shadow mode — would BLOCK in enforce mode (CODE_CRITICAL, AGENT_CRITICAL_SCENARIO)". `delivered=true`.
+  - **Enforce** (opt-in): BLOCK → outcome=`failure`, state=`failure`, "release blocked (…)".
+  - Idempotency: a duplicate identical status is delivered only once (delivery log); a changed state re-publishes. (`TestIdempotentPublisher`.)
+  - GitHub adapter fake-server tests: 201 created (asserts `Bearer` + state + context), 401/403 → Unauthorized (revoked/insufficient token), 404 → NotFound, 5xx → Unavailable. Incidental live check: with a real `$GITHUB_TOKEN` present the adapter reached api.github.com and correctly mapped 403 → Unauthorized.
+- Security/privacy: token from config/`$GITHUB_TOKEN`, never logged; missing coordinates → validation error (nothing published); only a summary title/body (no raw spans/PII). Enforcement is **opt-in** (shadow is the default and never blocks a merge).
+- Known limitations: the publisher is invoked by the `release-evidence` command, **not yet auto-fired by the orchestrator/reporter Kafka consumer on every verdict** (the reporter service already has its own shadow/enforce path for code verdicts; wiring the combined gate into that consumer is a later step). `--publish-shadow` with `$GITHUB_TOKEN` set will attempt a real publish — pass `--github-token ""` for an offline fake publish.
+- Next action: Phase 5 — demo runbook, seeded reset path, fault-injection walkthrough, screenshots/logs from real execution, limitations doc; update HANDOVER/roadmap.
 
 ### 2026-10-30 — AgentTwin integration Phase 3 evidence aggregation + release gate (DONE)
 

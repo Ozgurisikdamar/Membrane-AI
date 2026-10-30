@@ -66,6 +66,10 @@ func run() error {
 		out          = flag.String("out", "", "output file prefix; writes <prefix>.json and <prefix>.md (default: JSON to stdout)")
 		store        = flag.String("store", "", "persist the immutable evidence record to this directory")
 		regenerate   = flag.String("regenerate", "", "read a stored record by release id and re-emit it (requires --store); skips scan/eval")
+		publishSCM   = flag.Bool("publish-shadow", false, "publish the combined gate as an SCM status (shadow mode = non-blocking)")
+		enforce      = flag.Bool("enforce", false, "with --publish-shadow: enforce mode (BLOCK → failure) instead of shadow")
+		ghToken      = flag.String("github-token", os.Getenv("GITHUB_TOKEN"), "GitHub token for commit-status publish (or $GITHUB_TOKEN); empty = fake publisher")
+		ghBase       = flag.String("github-base-url", "https://api.github.com", "GitHub API base URL (for GHE/tests)")
 	)
 	flag.Parse()
 
@@ -138,7 +142,42 @@ func run() error {
 		}
 		fmt.Fprintln(os.Stderr, "persisted evidence for release "+ev.ReleaseID+" to "+*store)
 	}
+
+	if *publishSCM {
+		if err := publishShadow(ev, *enforce, *ghToken, *ghBase); err != nil {
+			return err
+		}
+	}
 	return emit(ev, label, *out)
+}
+
+// publishShadow maps the evidence to an SCM status and publishes it idempotently.
+// Shadow mode (default) is non-blocking; enforcement is opt-in. With no token a
+// deterministic fake publisher prints the status instead of calling GitHub.
+func publishShadow(ev assurance.ReleaseEvidenceV1, enforce bool, token, base string) error {
+	mode := assurance.ModeShadow
+	if enforce {
+		mode = assurance.ModeEnforce
+	}
+	st := assurance.MapSCMStatus(ev, mode)
+	var pub assurance.Publisher
+	target := "fake"
+	if strings.TrimSpace(token) != "" {
+		p, err := assurance.NewGitHubStatusPublisher(base, token)
+		if err != nil {
+			return err
+		}
+		pub, target = p, "github"
+	} else {
+		pub = &assurance.FakePublisher{}
+	}
+	delivered, err := assurance.NewIdempotentPublisher(pub).Publish(context.Background(), st)
+	if err != nil {
+		return err
+	}
+	fmt.Fprintf(os.Stderr, "scm publish (%s, %s): outcome=%s state=%s delivered=%v · %s\n",
+		mode, target, st.Outcome, st.State, delivered, st.Title)
+	return nil
 }
 
 // emit renders the canonical JSON/Markdown (deterministic from the record) to

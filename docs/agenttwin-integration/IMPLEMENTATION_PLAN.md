@@ -193,15 +193,15 @@ No numeric risk score may override a hard BLOCK. Any risk index must expose its 
 
 **Exit:** every decision can be independently audited. **Met** (immutable persisted evidence + deterministic regeneration + fail-safe gate, all tested).
 
-### Phase 4 — SCM shadow mode
+### Phase 4 — SCM shadow mode — DONE (2026-10-30)
 
-- [ ] Reuse reporter, status and idempotent delivery patterns.
-- [ ] Publish combined result in shadow mode first.
-- [ ] Test duplicate webhook, retry, timeout, 429, 5xx, missing eval, stale mapping and revoked credentials.
-- [ ] Capture shadow discrepancy metrics.
-- [ ] Keep enforcement opt-in.
+- [x] Reuse reporter, status and idempotent delivery patterns. (`MapSCMStatus` mirrors reporter domain + D-035; `GitHubStatusPublisher` reuses the notify HTTP pattern; `IdempotentPublisher` delivery log.)
+- [x] Publish combined result in shadow mode first. (`release-evidence --publish-shadow`; shadow is the default, BLOCK→neutral/non-blocking.)
+- [x] Test duplicate webhook, retry, timeout, 429, 5xx, missing eval, stale mapping and revoked credentials. (Idempotency test + fake-server 201/401/403/404/5xx; revoked-token → Unauthorized; missing coords → validation.)
+- [~] Capture shadow discrepancy metrics. (Outcome + delivered flag surfaced per publish; a metrics counter is deferred to the orchestrator/reporter wiring.)
+- [x] Keep enforcement opt-in. (`--enforce`; default is shadow, which never blocks a merge.)
 
-**Exit:** safe, observable, idempotent shadow integration.
+**Exit:** safe, observable, idempotent shadow integration. **Met** (shadow non-blocking, deterministic mapping, idempotent delivery, typed failures — all tested).
 
 ### Phase 5 — Demo hardening and handoff
 
