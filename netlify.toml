@@ -1,0 +1,37 @@
+# Netlify deployment for the Membrane AI dashboard (web/dashboard).
+# Mode A (demo) by default: a static-friendly Next.js app with deterministic
+# synthetic fixtures — no privileged credentials required. Mode B (connected)
+# additionally sets the server-side AGENTTWIN_* env (never NEXT_PUBLIC_*) and
+# requires a reachable backend; it is NOT production-ready until auth/CORS/TLS/
+# E2E are separately verified (DASHBOARD_AND_NETLIFY_WORKFLOW.md §6).
+
+[build]
+  base = "web/dashboard"
+  command = "npm run build"
+  # The Next.js runtime adapter sets the publish output; do not hard-code a dir.
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+[build.environment]
+  NODE_VERSION = "22"
+  # Demo mode needs no backend env. For Mode B, set these in the Netlify UI
+  # (Site settings → Environment variables) as NON-public, server-side only:
+  #   AGENTTWIN_BASE_URL      (https, allowlisted)
+  #   AGENTTWIN_API_KEY       (secret — never a NEXT_PUBLIC_* var)
+  #   AGENTTWIN_ALLOWED_HOSTS (comma-separated host allowlist)
+  #   AGENTTWIN_UI_URL        (for trace deep links)
+  # Never place a secret in a NEXT_PUBLIC_* variable or in this file.
+
+# HTML is always revalidated; hashed static assets are immutable.
+[[headers]]
+  for = "/_next/static/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    X-Frame-Options = "DENY"
+    Referrer-Policy = "strict-origin-when-cross-origin"

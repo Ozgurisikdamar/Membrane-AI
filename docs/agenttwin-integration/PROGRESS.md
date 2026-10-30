@@ -213,7 +213,7 @@ The owner requested a real Membrane AI product dashboard and a Netlify-ready dem
 | D1 — Dashboard foundation | `DONE` (2026-10-30) | Next.js app shell + 9-section nav, Membrane tokens, demo/live DataSource + states; 12 Vitest tests pass; production build OK (12 routes) |
 | D2 — Agent Assurance dashboard | `DONE` (2026-10-30) | BFF (server-side cred + SSRF allowlist) + live AgentTwin wiring verified; overview/agents/simulations/traces/release views; 27 unit + 4 E2E pass; build green |
 | D3 — Code Governance integration | `DONE` (2026-10-30) | Code Governance (real scan, grade F, masked), Security Center, Reports export; unified release correlation; AgentTwin Phase 2 Go evidence builder + client port + fake; 33 unit + 7 E2E green |
-| D4 — Netlify demo readiness | `NOT_STARTED` | Verified build/publish paths, config, headers, environment inventory, successful preview |
+| D4 — Netlify demo readiness | `DONE` (config+build verified; deploy = owner step) | netlify.toml (@netlify/plugin-nextjs, base web/dashboard), env classification, headers, prod build green, no secret in bundle; Mode A selected |
 | D5 — Final dashboard acceptance | `NOT_STARTED` | Reproducible runbook, real screenshots, responsive/accessibility/E2E evidence, owner handoff |
 
 ### 11.1 D0 audit — current-state inventory (verified 2026-10-30)
@@ -263,6 +263,17 @@ seeds shown) and are never presented as live.
 - Connected mode requires verified backend authentication, tenant/project authorization, HTTPS, CORS, secret handling and end-to-end tests.
 - A successful static Netlify deploy must never be reported as connected production readiness.
 - No deployment has been attempted as part of this planning update.
+
+### 2026-10-30 — D4 Netlify demo deployment readiness (config + build verified)
+
+- Status: Dashboard **D4 = DONE** at the readiness level achievable here (config + production build + security verified). **Actual Netlify deploy is the owner's step** — no Netlify account/credentials in this environment, so no `*.netlify.app` URL is produced (honest; not claimed). D5 next.
+- Files: repo-root `netlify.toml` (`base = "web/dashboard"`, `[[plugins]] @netlify/plugin-nextjs`, Node 22, cache/security headers); `@netlify/plugin-nextjs@5.16.5` devDependency; `web/dashboard/NETLIFY.md` runbook (Mode A/B, env classification, deploy steps).
+- Build command + output: `npm run build` (in `web/dashboard`); the Next runtime adapter sets the publish output. Production build green.
+- Deployment mode: **Mode A (demo)** selected & evidenced — no credentials, deterministic fixtures. **Mode B (connected)** documented but NOT production-ready (needs reachable backend + auth/CORS/TLS/E2E).
+- Env var inventory (names only, never values; all server-side, never `NEXT_PUBLIC_*`): `AGENTTWIN_BASE_URL`, `AGENTTWIN_API_KEY` (secret), `AGENTTWIN_ALLOWED_HOSTS`, `AGENTTWIN_ALLOW_LOOPBACK`, `AGENTTWIN_UI_URL`.
+- Security verification: **no secret leak in the client bundle** — only the env var *name* `AGENTTWIN_API_KEY` appears as documentation text; no secret value (`atk_*`/`sk_live`/`AKIA*`), not the real demo key; the `src/lib/server/*` module is excluded from the browser bundle. Headers set via `next.config.mjs` + `netlify.toml`.
+- Known limitation: a live Netlify URL + preview-deploy verification require the owner's Netlify account; recorded as the owner's deploy step, not done here. Static demo readiness ≠ connected production readiness.
+- Next action: D5 — clean-clone runbook, real screenshots (done for D2; refresh), a11y/responsive pass, final PROGRESS/HANDOVER/roadmap update.
 
 ### 2026-10-30 — D3 Code Governance + unified view + AgentTwin Phase 2 slice (DONE)
 
