@@ -3,7 +3,7 @@
 > **You are working on MEMBRANE.AI** — real-time security and architectural guardrails for AI coding
 > agents: an "architectural & security immune system" that governs AI-generated code at the point of
 > generation (prompt/MCP gateway) and again in CI/CD (AST + semantic consensus), grounded in each
-> organization's own "gold codebase". Private repo: `github.com/Ozgurisikdamar/Membrane-AI`.
+> organization's own "gold codebase". GitHub repository: `github.com/Ozgurisikdamar/Membrane-AI` (public at the time this work order was published).
 > Local working copy: **`C:\Dev\Membrane-AI`** (this directory).
 
 ---
@@ -76,7 +76,7 @@ When the user says **"devam et"** (or "continue", or gives no specific instructi
 
 ## 🐙 GitHub facts
 
-- Repo `https://github.com/Ozgurisikdamar/Membrane-AI` (private, default branch `main`).
+- Repo `https://github.com/Ozgurisikdamar/Membrane-AI` (public, default branch `main`, verified 2026-10-30).
 - Project board **#5** — `https://github.com/users/Ozgurisikdamar/projects/5`
   - Project node `PVT_kwHOBGlChs4BaHL_`; Status field `PVTSSF_lAHOBGlChs4BaHL_zhVBDnk`
   - Options: Todo `f75ad846` · In Progress `47fc9ee4` · Done `98236657`
