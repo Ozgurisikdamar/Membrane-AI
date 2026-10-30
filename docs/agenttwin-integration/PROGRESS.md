@@ -149,3 +149,38 @@ Refresh the top snapshot and append:
 ```
 
 The report is part of the deliverable. A phase is not complete until the report is updated, committed with the work, and pushed to the authorized feature branch.
+
+
+---
+
+## 11. Dashboard & Netlify workstream (authorized scope extension)
+
+**Work order:** [DASHBOARD_AND_NETLIFY_WORKFLOW.md](DASHBOARD_AND_NETLIFY_WORKFLOW.md)
+
+The owner requested a real Membrane AI product dashboard and a Netlify-ready demo. This is a new, separately tracked workstream; it does not change the verified status of the AgentTwin integration phases above.
+
+| Dashboard phase | Status | Required evidence |
+|---|---|---|
+| D0 — Baseline/UI/API/deployment inventory | `NOT_STARTED` | Current SHAs, frontend inventory, verified API/auth matrix, live/demo/unavailable data contract |
+| D1 — Dashboard foundation | `NOT_STARTED` | App shell, responsive layout, typed data providers, states, tests, production build |
+| D2 — Agent Assurance dashboard | `NOT_STARTED` | Evaluation/trace/scenario/release views backed by real or labelled synthetic evidence |
+| D3 — Code Governance integration | `NOT_STARTED` | Combined code + agent evidence, backend authorization and tenant-isolation tests |
+| D4 — Netlify demo readiness | `NOT_STARTED` | Verified build/publish paths, config, headers, environment inventory, successful preview |
+| D5 — Final dashboard acceptance | `NOT_STARTED` | Reproducible runbook, real screenshots, responsive/accessibility/E2E evidence, owner handoff |
+
+### Deployment readiness policy
+
+- Existing `docs/landing/index.html` is a marketing landing page, not the requested product dashboard.
+- Existing Grafana dashboard JSON is operational observability, not the product dashboard.
+- Netlify may host the static frontend; it does not host Membrane/AgentTwin Go/Python services or databases.
+- Demo mode may use deterministic synthetic fixtures only when visibly labelled as demo data.
+- Connected mode requires verified backend authentication, tenant/project authorization, HTTPS, CORS, secret handling and end-to-end tests.
+- A successful static Netlify deploy must never be reported as connected production readiness.
+- No deployment has been attempted as part of this planning update.
+
+### 2026-10-30 — Dashboard and Netlify scope authorized
+
+- Added `DASHBOARD_AND_NETLIFY_WORKFLOW.md` with D0–D5 deliverables, dashboard navigation/screens, source-of-truth rules, demo-mode safety, frontend security, Netlify deployment modes and acceptance criteria.
+- Updated the Claude integration work order and implementation plan to make the dashboard a first-class deliverable.
+- No frontend/backend implementation, test, build or deployment was performed by this documentation change.
+- Next: Claude executes D0 inventory and reports the actual frontend framework/build setup, API/auth capabilities and deployment blockers before coding.
