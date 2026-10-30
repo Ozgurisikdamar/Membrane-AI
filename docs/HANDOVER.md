@@ -3,7 +3,19 @@
 > **On "devam et": read this file, then do "Next up". Update this file before the session ends.**
 > Keep it short and current — this is state, not history.
 
-_Last updated: 2026-09-26 — session: review follow-up — landing copy now matches the build (lede,
+_Last updated: 2026-10-30 — session: **AgentTwin integration Phase 0 (baseline revalidation) DONE**.
+Verified both repos (Membrane `main` @ `aedc1ed`, AgentTwin `1e8fd0e`, read-only). All Membrane gates
+green (`task build/test/lint/eval/lint:py/test:py/build:cli`; `helm:lint` blocked — no helm). Reproduced
+the refund demo live on the AgentTwin Docker stack: 1.2.4 = 9/9, 1.3.0 = 6/9 (3 failed, 2 critical),
+1.3.1 = 9/9 fixed; deterministic-fake planner, no paid credentials. Full evidence in
+`docs/agenttwin-integration/PROGRESS.md` §7/§9. **Next up (that workstream): Phase 1** — versioned
+mapping/evidence contracts, integration ADR, OpenAPI fixtures + compatibility tests, narrowest adapter
+boundary (see `docs/agenttwin-integration/CLAUDE.md`). This is a scoped workstream on `main` per owner
+direction; the core Membrane roadmap state is unchanged. Toolchain note for cloud sessions: Go modules
+need the full go1.25 SDK (the auto-downloaded toolchain lacks `covdata`, breaking `go test -cover`);
+AgentTwin's Docker stack needs a `mirror.gcr.io` registry mirror to dodge Docker Hub 429s._
+
+_Previous: 2026-09-26 — session: review follow-up — landing copy now matches the build (lede,
 the "Secret & risk scanning" and "Three-tier cost gate" cards and the "Mask" step: detected secrets
 are masked for later stages, the local model is a keyword heuristic by default, the Claude + Gemini
 tier is opt-in); stale "six services" / "5 Go services" counts corrected to seven / six. For the

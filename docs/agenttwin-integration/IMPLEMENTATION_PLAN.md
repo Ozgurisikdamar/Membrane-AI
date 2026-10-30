@@ -149,16 +149,16 @@ No numeric risk score may override a hard BLOCK. Any risk index must expose its 
 
 ## 6. Phases and exit criteria
 
-### Phase 0 — Baseline revalidation
+### Phase 0 — Baseline revalidation — DONE (2026-10-30)
 
-- [ ] Confirm current Membrane `main` SHA and integration branch state.
-- [ ] Confirm current AgentTwin `main` SHA and implementation-board status.
-- [ ] Read AgentTwin OpenAPI routes, API key scopes and authentication.
-- [ ] Run feasible Membrane local quality gates.
-- [ ] Reproduce AgentTwin refund baseline/candidate pair; record actual results.
-- [ ] Record blockers and update `PROGRESS.md`.
+- [x] Confirm current Membrane `main` SHA and integration branch state. (`main` @ `aedc1ed`; `feature/agenttwin-assurance` absent — owner directed work on `main`.)
+- [x] Confirm current AgentTwin `main` SHA and implementation-board status. (`1e8fd0e`; README Phases 0–3 done, graph/release-gate/regression-miner/runtime-gateway pending.)
+- [x] Read AgentTwin OpenAPI routes, API key scopes and authentication. (4 OpenAPI docs; `bearerAuth`+`X-AgentTwin-Api-Key`; `Idempotency-Key` on mutations; paired pinning `/internal/v1/simulation-pairs` + `/api/v1/eval-runs`; live-probed.)
+- [x] Run feasible Membrane local quality gates. (build/test/lint/eval/lint:py/test:py/build:cli PASS; helm:lint BLOCKED — no helm.)
+- [x] Reproduce AgentTwin refund baseline/candidate pair; record actual results. (1.2.4=9/9; 1.3.0=6/9/2 critical; 1.3.1=9/9. See PROGRESS.md §7/§9.)
+- [x] Record blockers and update `PROGRESS.md`. (Docker Hub 429 → mirror.gcr.io; go1.25 SDK for covdata; helm absent.)
 
-**Exit:** evidence-backed current-state inventory and repeatable demo baseline.
+**Exit:** evidence-backed current-state inventory and repeatable demo baseline. **Met.**
 
 ### Phase 1 — Contract, mapping and threat model
 
