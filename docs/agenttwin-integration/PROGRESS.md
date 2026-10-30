@@ -14,7 +14,7 @@
 
 | Field | Value |
 |---|---|
-| Current phase | Phase 1 — contract & security design (**DONE**, tested) → Phase 2 next |
+| Current phase | Dashboard **D0–D5 DONE** (see §11); AgentTwin integration Phase 1 DONE, **Phase 2 IN_PROGRESS** (evidence builder+port+fake landed; HTTP adapter remains) |
 | Current status | `IN_PROGRESS` |
 | Membrane working branch | `main` (owner directed this workstream to develop on and push to `main`, superseding the work order §1.4 `feature/agenttwin-assurance` policy) |
 | Membrane HEAD (Phase 0 inspection, 2026-10-30) | `aedc1ed4014a684868ef3a339ea1d6d5df8235e0` (== `origin/main`; supersedes the 2026-09-26 `b8e8cfd…` baseline) |
@@ -214,7 +214,7 @@ The owner requested a real Membrane AI product dashboard and a Netlify-ready dem
 | D2 — Agent Assurance dashboard | `DONE` (2026-10-30) | BFF (server-side cred + SSRF allowlist) + live AgentTwin wiring verified; overview/agents/simulations/traces/release views; 27 unit + 4 E2E pass; build green |
 | D3 — Code Governance integration | `DONE` (2026-10-30) | Code Governance (real scan, grade F, masked), Security Center, Reports export; unified release correlation; AgentTwin Phase 2 Go evidence builder + client port + fake; 33 unit + 7 E2E green |
 | D4 — Netlify demo readiness | `DONE` (config+build verified; deploy = owner step) | netlify.toml (@netlify/plugin-nextjs, base web/dashboard), env classification, headers, prod build green, no secret in bundle; Mode A selected |
-| D5 — Final dashboard acceptance | `NOT_STARTED` | Reproducible runbook, real screenshots, responsive/accessibility/E2E evidence, owner handoff |
+| D5 — Final dashboard acceptance | `DONE` (2026-10-30) | Clean-clone README runbook, real desktop/mobile screenshots, 0 console errors, no-secret-in-bundle, basic a11y (1×h1 + nav/landmarks), provenance labels verified |
 
 ### 11.1 D0 audit — current-state inventory (verified 2026-10-30)
 
@@ -263,6 +263,21 @@ seeds shown) and are never presented as live.
 - Connected mode requires verified backend authentication, tenant/project authorization, HTTPS, CORS, secret handling and end-to-end tests.
 - A successful static Netlify deploy must never be reported as connected production readiness.
 - No deployment has been attempted as part of this planning update.
+
+### 2026-10-30 — D5 final dashboard acceptance (DONE)
+
+- Status: Dashboard **D5 = DONE**. All dashboard phases D0–D5 complete; pushed to `main`.
+- Files: `web/dashboard/README.md` (clean-clone runbook + scripts + data modes + architecture); `web/dashboard/src/app/icon.svg` (app icon — removes the favicon 404).
+- Acceptance evidence (verified in this environment):
+  - Clean-clone runbook documented (`npm ci && npm run build && npm start`, or `task dashboard:ci`).
+  - Real screenshots captured (demo mode): Overview (desktop+mobile), Code Governance, Release detail, Security Center — from an actual build, not invented.
+  - **0 console/page errors** on Overview after adding the app icon (was 1: favicon 404, now fixed); Code Governance / Release detail / Security pages: 0 console errors.
+  - Basic accessibility: exactly one `h1` per page + a `nav` landmark on every page; visible focus ring, `aria-current` nav, table captions, roles on state views; responsive at 390px (mobile) and 1280px (desktop).
+  - No secret in the client bundle (re-confirmed D4): only the env var *name* appears, no values; server module excluded from browser.
+  - Provenance labels verified: every data panel badged LIVE/DEMO/N/A; persistent DEMO banner; deterministic-fake + seed shown.
+- Gates: `npm run build` green; 33 Vitest + 7 Playwright E2E pass; `task test`/`task lint` green across Membrane modules; `pkg/assurance` 90%.
+- Known limitations (honest): live Netlify URL + Mode B connected production readiness remain the owner's step (no Netlify account here); Membrane read API for code/verdict history still absent (D0 gap → that history is demo); AgentTwin-integration Phase 2 HTTP adapter + Saga wiring remain (Phase 2 IN_PROGRESS). AgentTwin repo untouched (read-only).
+- Next action: owner review + Netlify deploy; then AgentTwin-integration Phase 2 remainder (Go HTTP adapter) → Phase 3 persistence → Phase 4 shadow SCM.
 
 ### 2026-10-30 — D4 Netlify demo deployment readiness (config + build verified)
 

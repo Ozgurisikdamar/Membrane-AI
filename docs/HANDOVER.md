@@ -3,7 +3,20 @@
 > **On "devam et": read this file, then do "Next up". Update this file before the session ends.**
 > Keep it short and current — this is state, not history.
 
-_Last updated: 2026-10-30 — session: **AgentTwin integration Phase 1 (contract & security design) DONE**.
+_Last updated: 2026-10-30 — session: **Membrane dashboard D0–D5 DONE** + AgentTwin integration Phase 2 slice.
+Built a real Next.js product dashboard at `web/dashboard/` (Code Governance + Agent Assurance): 9-section
+nav, demo/live `DataSource`, server-side BFF (`/api/bff/*`, SSRF allowlist, credential never in browser),
+Release Assurance with fail-safe gate reasons, Code Governance from the real `membrane scan` (grade F,
+masked secrets), Security Center, Reports export. **Live path verified end-to-end** against the AgentTwin
+compose stack (1.3.0 BLOCK / 1.3.1 PASS). 33 Vitest + 7 Playwright E2E green; Netlify config + runbook
+(`netlify.toml`, `web/dashboard/NETLIFY.md`, Mode A); no secret in bundle; 0 console errors. Go-side
+AgentTwin Phase 2 slice in `pkg/assurance` (`BuildReleaseEvidence` + `AgentTwinClient` port + `FakeClient`,
+90% cov). All on `main` per owner direction. **Next up:** owner reviews + Netlify deploy; then
+AgentTwin-integration Phase 2 remainder (Go HTTP adapter + orchestrator wiring) → Phase 3 persist → Phase 4
+shadow SCM. Full detail + commit SHAs in `docs/agenttwin-integration/PROGRESS.md` §11. Toolchain notes
+unchanged (full go1.25 SDK for covdata; mirror.gcr.io for the AgentTwin stack; Node 22 for the dashboard)._
+
+_Previous: 2026-10-30 — session: **AgentTwin integration Phase 1 (contract & security design) DONE**.
 Added the pure, versioned integration contract `pkg/assurance` (correlation/mapping/release-evidence
 records at `schema_version=1.0.0`, AgentTwin-status→gate mapping, SSRF allowlist, credential-by-reference)
 with JSON Schemas, fixtures (incl. the real 1.3.0/1.3.1 runs), a pinned AgentTwin OpenAPI snapshot and
