@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://membrane.ai/contracts/assurance/evidence.v1.schema.json",
+  "title": "Membrane AgentTwin release evidence record",
+  "description": "Minimal, immutable record binding a Membrane code-governance verdict to an AgentTwin paired evaluation into one auditable release decision. References and summaries only: no raw spans, prompts, tool payloads or PII.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "schema_version",
+    "release_id",
+    "correlation_id",
+    "created_at",
+    "membrane_organization_id",
+    "membrane_project_id",
+    "membrane_repository",
+    "membrane_code_submission_id",
+    "membrane_commit_sha",
+    "code_verdict",
+    "agent_id",
+    "baseline_version",
+    "candidate_version",
+    "agenttwin_project_id",
+    "agenttwin_evaluation_run_id",
+    "scenario_selection",
+    "run_seed",
+    "overall_status",
+    "gate_decision",
+    "snapshot_hash"
+  ],
+  "properties": {
+    "schema_version": { "const": "1.0.0" },
+    "release_id": { "type": "string", "minLength": 1 },
+    "correlation_id": { "type": "string", "minLength": 1 },
+    "created_at": { "type": "string", "format": "date-time" },
+    "membrane_organization_id": { "type": "string", "minLength": 1 },
+    "membrane_project_id": { "type": "string", "minLength": 1 },
+    "membrane_repository": { "type": "string", "minLength": 1 },
+    "membrane_code_submission_id": { "type": "string", "minLength": 1 },
+    "membrane_commit_sha": { "type": "string", "pattern": "^[0-9a-fA-F]{7,64}$" },
+    "membrane_pull_request_number": { "type": "integer", "minimum": 0 },
+    "code_verdict": { "enum": ["PASS", "WARN", "BLOCK", "INCOMPLETE", "ERROR"] },
+    "ruleset_version": { "type": "string" },
+    "findings_summary": { "type": "object", "additionalProperties": { "type": "integer" } },
+    "code_evidence_url": { "type": "string" },
+    "agent_id": { "type": "string", "minLength": 1 },
+    "baseline_version": { "type": "string", "minLength": 1 },
+    "candidate_version": { "type": "string", "minLength": 1 },
+    "candidate_manifest_hash": { "type": "string" },
+    "candidate_prompt_hash": { "type": "string" },
+    "agenttwin_project_id": { "type": "string", "minLength": 1 },
+    "agenttwin_evaluation_run_id": { "type": "string", "minLength": 1 },
+    "agenttwin_simulation_pair_ids": { "type": "array", "items": { "type": "string" } },
+    "scenario_selection": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+    "run_seed": { "type": "string", "minLength": 1 },
+    "engine_version": { "type": "string" },
+    "evaluator_version": { "type": "string" },
+    "overall_status": {
+      "enum": [
+        "COMPLETED",
+        "COMPLETED_WITH_CRITICAL_FAILURE",
+        "COMPLETED_WITH_REGRESSION",
+        "ERROR",
+        "INCOMPLETE",
+        "PENDING",
+        "NOT_CONFIGURED",
+        "BLOCKED"
+      ]
+    },
+    "per_scenario": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["scenario", "status", "severity"],
+        "properties": {
+          "scenario": { "type": "string" },
+          "status": { "type": "string" },
+          "severity": { "type": "string" },
+          "evidence_urls": { "type": "object", "additionalProperties": { "type": "string" } }
+        }
+      }
+    },
+    "critical_failures": { "type": "array", "items": { "$ref": "#/properties/per_scenario/items" } },
+    "judge": {
+      "type": "object",
+      "properties": {
+        "provider": { "type": "string" },
+        "model": { "type": "string" },
+        "prompt_hash": { "type": "string" },
+        "calibration_status": { "type": "string" }
+      }
+    },
+    "gate_decision": { "enum": ["PASS", "WARN", "BLOCK", "INCOMPLETE", "ERROR"] },
+    "triggered_rules": { "type": "array", "items": { "type": "string" } },
+    "snapshot_hash": { "type": "string", "minLength": 1 },
+    "audit_ref": { "type": "string" }
+  },
+  "allOf": [
+    {
+      "$comment": "Invariant 1: PASS only when the agent outcome is clean COMPLETED.",
+      "if": { "properties": { "gate_decision": { "const": "PASS" } }, "required": ["gate_decision"] },
+      "then": { "properties": { "overall_status": { "const": "COMPLETED" } } }
+    },
+    {
+      "$comment": "Invariant 2: a BLOCK or WARN decision must cite a triggered rule.",
+      "if": { "properties": { "gate_decision": { "enum": ["BLOCK", "WARN"] } }, "required": ["gate_decision"] },
+      "then": { "required": ["triggered_rules"], "properties": { "triggered_rules": { "minItems": 1 } } }
+    }
+  ]
+}

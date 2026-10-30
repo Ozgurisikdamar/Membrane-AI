@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://membrane.ai/contracts/assurance/mapping.v1.schema.json",
+  "title": "Membrane AgentTwin tenant mapping record",
+  "description": "Minimal mapping between a Membrane project and an AgentTwin project. The base URL is server-side allowlisted configuration, never a user-controlled URL; the credential is a secret-manager key name only, never an inline secret.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "schema_version",
+    "mapping_id",
+    "membrane_org_id",
+    "membrane_project_id",
+    "agenttwin_org_id",
+    "agenttwin_project_id",
+    "agenttwin_base_url",
+    "credential_ref",
+    "status",
+    "created_at",
+    "updated_at",
+    "actor",
+    "audit_ref"
+  ],
+  "properties": {
+    "schema_version": { "const": "1.0.0" },
+    "mapping_id": { "type": "string", "minLength": 1 },
+    "membrane_org_id": { "type": "string", "minLength": 1 },
+    "membrane_project_id": { "type": "string", "minLength": 1 },
+    "agenttwin_org_id": { "type": "string", "minLength": 1 },
+    "agenttwin_project_id": { "type": "string", "minLength": 1 },
+    "agenttwin_base_url": { "type": "string", "pattern": "^https?://" },
+    "credential_ref": { "type": "string", "minLength": 1 },
+    "status": { "type": "string", "minLength": 1 },
+    "created_at": { "type": "string", "format": "date-time" },
+    "updated_at": { "type": "string", "format": "date-time" },
+    "actor": { "type": "string", "minLength": 1 },
+    "audit_ref": { "type": "string", "minLength": 1 },
+    "default_agent_id": { "type": "string" }
+  }
+}

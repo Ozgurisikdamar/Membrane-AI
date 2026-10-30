@@ -3,7 +3,18 @@
 > **On "devam et": read this file, then do "Next up". Update this file before the session ends.**
 > Keep it short and current — this is state, not history.
 
-_Last updated: 2026-10-30 — session: **AgentTwin integration Phase 0 (baseline revalidation) DONE**.
+_Last updated: 2026-10-30 — session: **AgentTwin integration Phase 1 (contract & security design) DONE**.
+Added the pure, versioned integration contract `pkg/assurance` (correlation/mapping/release-evidence
+records at `schema_version=1.0.0`, AgentTwin-status→gate mapping, SSRF allowlist, credential-by-reference)
+with JSON Schemas, fixtures (incl. the real 1.3.0/1.3.1 runs), a pinned AgentTwin OpenAPI snapshot and
+contract/compat tests (`pkg/assurance` 93.7% cov; `task build/test/lint` green). Design docs:
+`docs/agenttwin-integration/{ADR-0001-agent-assurance-integration,THREAT_MODEL,CONTRACTS}.md` + `docs/DECISIONS.md` D-037.
+Boundary decision: the adapter lives at the orchestrator composition root, not a new service. **Next up
+(workstream): Phase 2** — typed AgentTwin client port + HTTP adapter in the orchestrator, config/secret
+handling, deterministic fake adapter, one combined evidence record from a manual CLI action against the
+reproduced demo. Core Membrane roadmap unchanged._
+
+_Previous: 2026-10-30 — session: **AgentTwin integration Phase 0 (baseline revalidation) DONE**.
 Verified both repos (Membrane `main` @ `aedc1ed`, AgentTwin `1e8fd0e`, read-only). All Membrane gates
 green (`task build/test/lint/eval/lint:py/test:py/build:cli`; `helm:lint` blocked — no helm). Reproduced
 the refund demo live on the AgentTwin Docker stack: 1.2.4 = 9/9, 1.3.0 = 6/9 (3 failed, 2 critical),

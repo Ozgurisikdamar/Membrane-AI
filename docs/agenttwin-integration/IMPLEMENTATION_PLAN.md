@@ -160,16 +160,16 @@ No numeric risk score may override a hard BLOCK. Any risk index must expose its 
 
 **Exit:** evidence-backed current-state inventory and repeatable demo baseline. **Met.**
 
-### Phase 1 — Contract, mapping and threat model
+### Phase 1 — Contract, mapping and threat model — DONE (2026-10-30)
 
-- [ ] Choose integration boundary inside Membrane.
-- [ ] Define mapping and evidence contracts with schema versioning.
-- [ ] Record ADR for independent data ownership and HTTP-first integration.
-- [ ] Define auth, tenant scoping, URL allowlist, TLS, timeouts, size bounds, retry/idempotency.
-- [ ] Add fixtures and compatibility checks.
-- [ ] Document upstream AgentTwin gaps without changing its repo.
+- [x] Choose integration boundary inside Membrane. (Orchestrator composition root, not a new service; ADR-0001 #3. Pure contract in `pkg/assurance` now; port+adapter in Phase 2.)
+- [x] Define mapping and evidence contracts with schema versioning. (`pkg/assurance`: `MappingRecordV1`/`ReleaseEvidenceV1`/`CorrelationContext`, all `schema_version=1.0.0`; JSON Schemas under `pkg/assurance/contracts/`.)
+- [x] Record ADR for independent data ownership and HTTP-first integration. (`ADR-0001-agent-assurance-integration.md`; `docs/DECISIONS.md` D-037.)
+- [x] Define auth, tenant scoping, URL allowlist, TLS, timeouts, size bounds, retry/idempotency. (`THREAT_MODEL.md` T1–T12; `Allowlist` + credential-by-reference + status/idempotency contract shipped; timeouts/size/redirect are Phase-2 adapter code, designed here.)
+- [x] Add fixtures and compatibility checks. (`contracts/fixtures/*` incl. the real 1.3.0/1.3.1 runs; pinned AgentTwin OpenAPI snapshot; `compat_test.go` — pkg/assurance 93.7% coverage, `task test`/`task lint` green.)
+- [x] Document upstream AgentTwin gaps without changing its repo. (Cross-project service credential open item recorded; AgentTwin untouched.)
 
-**Exit:** tested contract and threat model; no shared DB/event bus.
+**Exit:** tested contract and threat model; no shared DB/event bus. **Met** (contract tests green; HTTP-only, no shared DB/bus).
 
 ### Phase 2 — AgentTwin client and vertical slice
 
